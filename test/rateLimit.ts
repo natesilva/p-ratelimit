@@ -41,13 +41,13 @@ test('concurrency is enforced', async t => {
     rateLimit(fn)
   ];
 
+  await new Promise(resolve => setTimeout(resolve, 250));
+
+  t.is(completed, 2, 'after 250 ms 2 jobs are done');
+
   await new Promise(resolve => setTimeout(resolve, 200));
 
-  t.is(completed, 2);
-
-  await new Promise(resolve => setTimeout(resolve, 200));
-
-  t.is(completed, 3);
+  t.is(completed, 3, 'after another 200 ms all 3 jobs are done');
 });
 
 test('rate limits are enforced', async t => {
@@ -72,13 +72,13 @@ test('rate limits are enforced', async t => {
     rateLimit(fn)
   ];
 
-  t.is(quotaManager.activeCount, 3);
+  t.is(quotaManager.activeCount, 3, 'initially 3 jobs are active');
   await new Promise(resolve => setTimeout(resolve, 600));
-  t.is(completed, 3);
-  t.is(quotaManager.activeCount, 2);
+  t.is(completed, 3, 'after 600 ms 3 jobs are done');
+  t.is(quotaManager.activeCount, 2, '2 jobs are now active');
   await new Promise(resolve => setTimeout(resolve, 200));
-  t.is(completed, 5);
-  t.is(quotaManager.activeCount, 0);
+  t.is(completed, 5, 'all 5 jobs are done');
+  t.is(quotaManager.activeCount, 0, 'no jobs are still active');
 });
 
 test('combined rate limits and concurrency are enforced', async t => {
@@ -103,16 +103,16 @@ test('combined rate limits and concurrency are enforced', async t => {
     rateLimit(fn)
   ];
 
-  t.is(quotaManager.activeCount, 2);      // only two started due to concurrency limit
-  await new Promise(resolve => setTimeout(resolve, 200));
-  t.is(completed, 2);
-  t.is(quotaManager.activeCount, 1);      // one one more allowed due to rate limit
+  t.is(quotaManager.activeCount, 2, 'only 2 jobs are started due to concurrency limit');
+  await new Promise(resolve => setTimeout(resolve, 250));
+  t.is(completed, 2, 'after 250 ms 2 jobs are done');
+  t.is(quotaManager.activeCount, 1, 'rate limit allowed another job to start');
   await new Promise(resolve => setTimeout(resolve, 400));
-  t.is(completed, 3);
-  t.is(quotaManager.activeCount, 2);      // rate limit window open again
+  t.is(completed, 3, 'after another 400 ms 3 jobs are done');
+  t.is(quotaManager.activeCount, 2, 'now 2 previously-queued jobs are running');
   await new Promise(resolve => setTimeout(resolve, 200));
-  t.is(quotaManager.activeCount, 0);
-  t.is(completed, 5);
+  t.is(quotaManager.activeCount, 0, 'no jobs are still running');
+  t.is(completed, 5, 'all jobs are done');
 });
 
 test('API calls are queued until RedisQuotaManager is ready', async t => {

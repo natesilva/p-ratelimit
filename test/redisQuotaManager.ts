@@ -29,7 +29,7 @@ test('Redis quota manager works', async t => {
   qm.end();
   t.is(qm.activeCount, 1, 'still 1 running');
   t.is(qm.start(), false, 'still would exceed quota of 3 per 1/2 second');
-  await new Promise(resolve => setTimeout(resolve, 500));
+  await new Promise(resolve => setTimeout(resolve, 600));
   t.is(qm.activeCount, 1, 'still 1 running, after timeout');
   t.is(qm.start(), true, 'start job (4)');
   t.is(qm.activeCount, 2, 'still 2 running');
@@ -135,7 +135,7 @@ test('Redis quota can be updated', async t => {
   t.deepEqual(actualQuota4, { rate: 19, interval: 750 });
 });
 
-test.only('Redis quota clients can expire', async t => {
+test('Redis quota clients can expire', async t => {
   const client1: RedisClient = redis.createClient(6379, 'localhost');
   const pubSubClient1: RedisClient = redis.createClient(6379, 'localhost');
 
@@ -153,24 +153,36 @@ test.only('Redis quota clients can expire', async t => {
 
   await Promise.all([qm1.ready, qm2.ready]);
 
-  // each quota manager should have been assigned 2 rate units and 1 concurrency unit
+  // each quota manager should have been assigned 1/3 of the available quota
+  let expectedQuota: Quota = {
+    rate: Math.floor(quota.rate / 3),
+    interval: quota.interval,
+    concurrency: Math.floor(quota.concurrency / 3)
+  };
   let actualQuota1 = qm1.quota;
-  t.deepEqual(actualQuota1, { rate: 2, interval: 50, concurrency: 1 });
+  t.deepEqual(actualQuota1, expectedQuota, 'client 1 has the correct quota');
   let actualQuota2 = qm2.quota;
-  t.deepEqual(actualQuota2, { rate: 2, interval: 50, concurrency: 1 });
+  t.deepEqual(actualQuota2, expectedQuota, 'client 2 has the correct quota');
   let actualQuota3 = qm3.quota;
-  t.deepEqual(actualQuota3, { rate: 2, interval: 50, concurrency: 1 });
+  t.deepEqual(actualQuota3, expectedQuota, 'client 3 has the correct quota');
 
   // remove one of them
   await qm2.unregister();
   qm2 = null;
 
-  // wait a while to ensure housekeeping runs
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  // force housekeeping to run
+  await qm1.housekeeping();
+  // wait for changes to be broadcast
+  await new Promise(resolve => setTimeout(resolve, 100));
 
-  // each remaining quota manager should now have 3 rate units and 1 concurrency unit
+  // each remaining quota manager should now have 1/2 of the available quota
+  expectedQuota = {
+    rate: Math.floor(quota.rate / 2),
+    interval: quota.interval,
+    concurrency: Math.floor(quota.concurrency / 2)
+  };
   actualQuota1 = qm1.quota;
-  t.deepEqual(actualQuota1, { rate: 3, interval: 50, concurrency: 1 });
+  t.deepEqual(actualQuota1, expectedQuota, 'after housekeeping, client 1 has the correct quota');
   actualQuota3 = qm3.quota;
-  t.deepEqual(actualQuota3, { rate: 3, interval: 50, concurrency: 1 });
+  t.deepEqual(actualQuota3, expectedQuota, 'after housekeeping, client 2 has the correct quota');
 });

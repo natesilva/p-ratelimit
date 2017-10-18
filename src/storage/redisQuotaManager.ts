@@ -121,7 +121,7 @@ export class RedisQuotaManager extends QuotaManager {
   }
 
   /** Clear out expired clients, extend TTL of the hash */
-  private async housekeeping() {
+  public async housekeeping() {
     const timestamp = Date.now();
     await promisify(this.client.expire.bind(this.client))(this.quotaName, 3600);
     const expiredCount = await this.clearExpiredClients();
@@ -136,7 +136,7 @@ export class RedisQuotaManager extends QuotaManager {
   }
 
   /** Return the uuids of live and expired clients */
-  public async getClientUuids() {
+  private async getClientUuids() {
     const expiredTime = Date.now() - this.heartbeatFrequency * 2;
     const allClients = await promisify(this.client.hgetall.bind(this.client))(this.quotaName);
 
