@@ -1,0 +1,22 @@
+// Project-specific settings for Visual Studio Code
+{
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.exclude": {
+    "**/.build": true,
+    "**/node_modules": true,
+    "**/coverage": true,
+    "**/.nyc_output": true
+  },
+  "tslint.autoFixOnSave": true,
+  "typescript.tsdk": "./node_modules/typescript/lib",
+  "search.useIgnoreFilesByDefault": true,
+  "files.defaultLanguage": "typescript",
+  "files.eol": "\n",
+  "editor.wordWrapColumn": 90,
+  "editor.rulers": [
+    90
+  ]
+}

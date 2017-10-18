@@ -1,0 +1,32 @@
+{
+  "name": "p-ratelimit",
+  "version": "1.0.0",
+  "description": "Makes sure you don’t call rate-limited APIs too quickly",
+  "license": "MIT",
+  "author": "Nate Silva <nate@natesilva.com>",
+  "main": ".build/src/index.js",
+  "types": ".build/src/index.d.ts",
+  "scripts": {
+    "test": "npm run prepare && ava --verbose ./.build/test",
+    "coverage": "npm run prepare && nyc --reporter lcov --reporter text ava ./.build/test",
+    "prepare": "del-cli .build && tsc"
+  },
+  "engines": {
+    "node": ">=6.10.3"
+  },
+  "devDependencies": {
+    "@types/node": "^8.0.36",
+    "@types/redis": "^2.6.1",
+    "ava": "^0.22.0",
+    "del-cli": "^1.1.0",
+    "fakeredis": "^2.0.0",
+    "nyc": "^11.2.1",
+    "ts-node": "^3.3.0",
+    "tslint": "^5.7.0",
+    "typescript": "^2.5.3"
+  },
+  "dependencies": {
+    "benchmark": "^2.1.4",
+    "double-ended-queue": "^2.1.0-0"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "include": [
+    "src/**/*",
+    "test/**/*"
+  ],
+  "compilerOptions": {
+    "outDir": ".build",
+    "target": "ES2015",
+    "module": "commonjs",
+    "sourceMap": true,
+    "noImplicitReturns": true,
+    "experimentalDecorators": true,
+    "declaration": true
+  }
+}
