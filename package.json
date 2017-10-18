@@ -15,18 +15,15 @@
     "node": ">=6.10.3"
   },
   "devDependencies": {
-    "@types/node": "^8.0.36",
+    "@types/node": "^8.0.44",
     "@types/redis": "^2.6.1",
     "ava": "^0.22.0",
     "del-cli": "^1.1.0",
-    "fakeredis": "^2.0.0",
     "nyc": "^11.2.1",
+    "redis": "^2.8.0",
     "ts-node": "^3.3.0",
     "tslint": "^5.7.0",
     "typescript": "^2.5.3"
   },
-  "dependencies": {
-    "benchmark": "^2.1.4",
-    "double-ended-queue": "^2.1.0-0"
-  }
+  "dependencies": {}
 }

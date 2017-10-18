@@ -1,5 +1,3 @@
-/// <reference types="redis" />
-
 import { getRandomInt, promisify, uniqueId } from '../util';
 
 import { Quota } from './quota';
@@ -14,32 +12,140 @@ export class RedisQuotaManager extends QuotaManager {
   public readonly uniqueId: string;
   private _ready = false;
   private heartbeatTimer: any = null;
+  private readonly pubSubClient: RedisClient;
+  private lastQuotaReceived: number = null;
+
+  // record the client id and timestamp of incoming PINGs
+  private knownClients = new Map<string, number>();
 
   /**
    * @param channelQuota the overall quota to be shared among all clients
    * @param quotaName unique name for this quota - used as a Redis pub/sub channel name
    * @param client a Redis client
-   * @param pubSubClient another Redis client (used for pub/sub)
-   * @param heartbeatFrequency how often to report to the server that we are still here
    */
   constructor(
-    private readonly channelQuota: Quota,
+    private channelQuota: Quota,
     private readonly quotaName: string,
-    private readonly client: RedisClient,
-    private readonly pubSubClient: RedisClient,
-    private readonly heartbeatFrequency = 30000
+    private readonly client: RedisClient
   ) {
-    // Start with a zero quota; upon init we’ll receive our real quota over the pub-sub
-    // channel.
+    // Start with a zero quota; this will be updated when we get our first QUOTA message
     super({ interval: 1000, rate: 0, concurrency: 0 });
     this.uniqueId = uniqueId();
+    this.knownClients.set(this.uniqueId, Date.now());
+    this.pubSubClient = this.client.duplicate();
     this.register();
   }
 
+  /** Join the client pool, coordinated by the shared channel on Redis */
+  private async register() {
+    this.pubSubClient.on('message', (channel, message) => this.message(channel, message));
+    await promisify(this.pubSubClient.subscribe.bind(this.pubSubClient))(this.quotaName);
+    await this.sendMessage('PING', this.uniqueId);
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    await this.sendMessage('QUOTA', this.channelQuota);
+    this.heartbeatTimer = setInterval(this.heartbeat.bind(this), 30000);
+  }
+
+  /** Send a message to the shared Redis channel */
+  private sendMessage(command: string, value: any) {
+    return promisify(this.client.publish.bind(this.client))(
+      this.quotaName,
+      JSON.stringify({ command, value })
+    );
+  }
+
+  /** Disconnect from the client pool */
+  public async unregister() {
+    /* istanbul ignore else */
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+    await promisify(this.pubSubClient.unsubscribe.bind(this.pubSubClient))();
+    await this.sendMessage('BYE', this.uniqueId);
+    this._quota = { interval: 1000, rate: 0, concurrency: 0 };
+  }
+
+  /** Receive client pings and quota update messages */
+  private message(channel: string, message: any) {
+    /* istanbul ignore if */
+    if (channel !== this.quotaName) { return; }
+
+    let command: string;
+    let value: any;
+    try {
+      const parsedMessage = JSON.parse(message);
+      command = parsedMessage.command;
+      value = parsedMessage.value;
+    } catch {
+      const msg = `unrecognized Redis pub/sub message on channel ${channel}: ${message}`;
+      console.error(msg);
+    }
+
+    if (command === 'PING') {
+      const newClient = !this.knownClients.has(value);
+      this.knownClients.set(value, Date.now());
+      if (newClient) {
+        this.updateQuota();
+        if (value !== this.uniqueId) { this.sendMessage('PING', this.uniqueId); }
+      }
+      return;
+    }
+
+    if (command === 'BYE') {
+      this.knownClients.delete(value);
+      this.updateQuota();
+      return;
+    }
+
+    if (command === 'QUOTA') {
+      this.channelQuota = value;
+      this.updateQuota();
+      this.lastQuotaReceived = Date.now();
+      this._ready = true;
+    }
+  }
+
+  /** Calculate our quota -- our portion of the overall channel quota */
+  private updateQuota() {
+    // cull expired clients
+    const expired = Date.now() - 90000;
+    for (const [k, v] of this.knownClients) {
+      if (v <= expired) { this.knownClients.delete(k); }
+    }
+
+    // how many clients do we know about on this channel?
+    if (!this.knownClients.size) { return; }
+
+    const newQuota: Quota = {
+      rate: Math.floor(this.channelQuota.rate / this.knownClients.size),
+      interval: this.channelQuota.interval
+    };
+
+    if (this.channelQuota.concurrency) {
+      newQuota.concurrency =
+        Math.floor(this.channelQuota.concurrency / this.knownClients.size);
+    }
+
+    this._quota = newQuota;
+  }
+
+  /** Periodically do housekeeping */
+  private heartbeat() {
+    // Let the others know we are still here
+    this.sendMessage('PING', this.uniqueId);
+
+    // Every now and then, check if we've got a quota message recently. If not, send one.
+    if (getRandomInt(0, 5) === 0) {
+      if (!this.lastQuotaReceived || Date.now() - this.lastQuotaReceived > 60000) {
+        this.sendMessage('QUOTA', this.channelQuota);
+      }
+    }
+  }
+
   /**
-   * Promise that returns true when the Redis connection is ready to use. Primarily for
-   * unit testing. Under normal circumstances API requests will be queued, so you don’t
-   * need to be concerned about when the connection becomes ready.
+   * Promise that returns true when this queue manager is ready to use. Primarily for unit
+   * testing. Requests are queued so this normally doesn't matter.
    * @returns true when the connection is ready
    * @throws if the connection is not ready within 5 seconds
    */
@@ -59,118 +165,5 @@ export class RedisQuotaManager extends QuotaManager {
         }
       }, 100)
     });
-  }
-
-  /** Register this instance with the Redis server */
-  private async register() {
-    this.pubSubClient.on('message', (channel, message) => this.message(channel, message));
-    await promisify(this.pubSubClient.subscribe.bind(this.pubSubClient))(this.quotaName);
-    await this.heartbeat();
-    await this.broadcastNewQuota();
-    this.heartbeatTimer = setInterval(this.heartbeat.bind(this), this.heartbeatFrequency);
-  }
-
-  public async unregister() {
-    /* istanbul ignore else */
-    if (this.heartbeatTimer) {
-      clearInterval(this.heartbeatTimer);
-      this.heartbeatTimer = null;
-    }
-    await promisify(this.pubSubClient.unsubscribe.bind(this.pubSubClient))();
-  }
-
-  /** Receive quota update messages */
-  private message(channel: string, message: any) {
-    /* istanbul ignore if */
-    if (channel !== this.quotaName) { return; }
-    const newQuota: Quota = JSON.parse(message);
-    this._quota = Object.assign({}, newQuota);
-    this._ready = true;
-  }
-
-  /** Calculate and broadcast a new quota */
-  private async broadcastNewQuota() {
-    const { liveClientIds } = await this.getClientUuids();
-
-    const newQuota: Quota = {
-      rate: Math.floor(this.channelQuota.rate / liveClientIds.length),
-      interval: this.channelQuota.interval
-    };
-
-    if (this.channelQuota.concurrency) {
-      newQuota.concurrency =
-        Math.floor(this.channelQuota.concurrency / liveClientIds.length);
-    }
-
-    this.client.publish.bind(this.client)(this.quotaName, JSON.stringify(newQuota));
-  }
-
-  /** Periodically let Redis know we are still here */
-  private async heartbeat() {
-    // const timestamp = await this.getServerTimestamp();
-    const timestamp = Date.now();
-
-    await promisify(this.client.hset.bind(this.client))(
-      this.quotaName,
-      this.uniqueId,
-      timestamp
-    );
-
-    // approximately every 10 heartbeats, do housekeeping
-    if (getRandomInt(0, 10) === 0) { this.housekeeping(); }
-  }
-
-  /** Clear out expired clients, extend TTL of the hash */
-  public async housekeeping() {
-    const timestamp = Date.now();
-    await promisify(this.client.expire.bind(this.client))(this.quotaName, 3600);
-    const expiredCount = await this.clearExpiredClients();
-    if (expiredCount) { await this.broadcastNewQuota(); }
-  }
-
-  /** Current server time as a Unix timestamp (resolution: 1 second) */
-  private async getServerTimestamp() {
-    const serverTime: Array<string> = await promisify(this.client.time.bind(this.client))();
-    const result = parseInt(serverTime[0], 10);
-    return result;
-  }
-
-  /** Return the uuids of live and expired clients */
-  private async getClientUuids() {
-    const expiredTime = Date.now() - this.heartbeatFrequency * 2;
-    const allClients = await promisify(this.client.hgetall.bind(this.client))(this.quotaName);
-
-    const liveClientIds: string[] = [];
-    const expiredClientIds: string[] = [];
-
-    Object.keys(allClients).forEach(uuid => {
-      const lastHeartbeat = parseInt(allClients[uuid]);
-      if (lastHeartbeat > expiredTime) { liveClientIds.push(uuid); }
-      else { expiredClientIds.push(uuid); }
-    });
-
-    const result = {
-      liveClientIds,
-      expiredClientIds
-    };
-
-    return result;
-  }
-
-  /**
-   * Clear out expired client registrations.
-   * @returns number of expired clients
-   */
-  private async clearExpiredClients() {
-    const { expiredClientIds } = await this.getClientUuids();
-
-    if (expiredClientIds.length) {
-      await promisify(this.client.hdel.bind(this.client))(
-        this.quotaName,
-        ...expiredClientIds
-      );
-    }
-
-    return expiredClientIds.length;
   }
 }

@@ -1,6 +1,4 @@
-/// <reference types="redis" />
-
-import * as redis from 'fakeredis';
+import * as redis from 'redis';
 
 import { Quota, QuotaManager, RedisQuotaManager } from '../src';
 
@@ -9,6 +7,11 @@ import { pRateLimit } from '../src/rateLimit';
 import test from 'ava';
 import { uniqueId } from '../src/util';
 import { Dequeue } from '../src/dequeue';
+
+// testing requires a real Redis server
+// fakeredis, redis-mock, redis-js, etc. have missing or broken client.duplicate()
+const REDIS_SERVER = 'localhost';
+const REDIS_PORT = 6379;
 
 /** Create a mock rate-limited API function. */
 class MockApi {
@@ -147,11 +150,9 @@ test('combined rate limits and concurrency are enforced', async t => {
 });
 
 test('API calls are queued until RedisQuotaManager is ready', async t => {
-  const client: RedisClient = redis.createClient(6379, 'localhost');
-  const pubSubClient: RedisClient = redis.createClient(6379, 'localhost');
-
+  const client: RedisClient = redis.createClient(REDIS_PORT, REDIS_SERVER);
   const quota: Quota = { rate: 300, interval: 1000, concurrency: 100 };
-  const qm: RedisQuotaManager = new RedisQuotaManager(quota, uniqueId(), client, pubSubClient);
+  const qm: RedisQuotaManager = new RedisQuotaManager(quota, uniqueId(), client);
 
   const rateLimit = pRateLimit(qm);
 
