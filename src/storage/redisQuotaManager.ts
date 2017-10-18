@@ -154,8 +154,6 @@ export class RedisQuotaManager extends QuotaManager {
       expiredClientIds
     };
 
-    console.log('>>>>>>>>>', allClients, Date.now(), expiredTime);
-
     return result;
   }
 
