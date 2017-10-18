@@ -173,7 +173,7 @@ test('Redis quota clients can expire', async t => {
   // force housekeeping to run
   await qm1.housekeeping();
   // wait for changes to be broadcast
-  await new Promise(resolve => setTimeout(resolve, 100));
+  await new Promise(resolve => setTimeout(resolve, 500));
 
   // each remaining quota manager should now have 1/2 of the available quota
   expectedQuota = {
