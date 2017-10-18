@@ -21,7 +21,7 @@ export function pRateLimit(quotaManager: QuotaManager | Quota)
       timerId = setTimeout(() => {
         timerId = null;
         next();
-      }, 100);
+      }, 50);
     }
   };
 
