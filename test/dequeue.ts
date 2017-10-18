@@ -59,3 +59,23 @@ test('dequeue large size, push in, pop out', t => {
 
   t.is(d.length, 0);
 });
+
+test('if empty, head and tail return undefined', t => {
+  const d = new Dequeue();
+  t.is(d.length, 0);
+  t.is(d.peekFront(), undefined);
+  t.is(d.peekBack(), undefined);
+  t.is(d.shift(), undefined);
+  t.is(d.pop(), undefined);
+});
+
+test('clear the dequeue', t => {
+  const d = new Dequeue();
+  d.push('foo');
+  d.push('bar');
+  t.true(d.length > 0);
+  d.clear();
+  t.true(d.length === 0);
+  t.is(d.peekFront(), undefined);
+  t.is(d.peekBack(), undefined);
+});

@@ -6,13 +6,13 @@ interface Node<T> {
 
 export class Dequeue<T> {
   private _length = 0;
-  private head: Node<T> = null;
-  private tail: Node<T> = null;
+  private head: Node<T> = undefined;
+  private tail: Node<T> = undefined;
 
   get length() { return this._length; }
 
   clear() {
-    this.head = this.tail = null;
+    this.head = this.tail = undefined;
     this._length = 0;
   }
 
@@ -20,7 +20,7 @@ export class Dequeue<T> {
     const newNode: Node<T> = {
       value,
       prev: this.tail,
-      next: null
+      next: undefined
     };
 
     if (this._length) {
@@ -33,11 +33,12 @@ export class Dequeue<T> {
   }
 
   pop(): T {
+    if (!this._length) { return undefined; }
     const result = this.tail;
     this.tail = this.tail.prev;
     this._length--;
     if (!this._length) {
-      this.head = this.tail = null;
+      this.head = this.tail = undefined;
     }
     return result.value;
   }
@@ -45,7 +46,7 @@ export class Dequeue<T> {
   unshift(value: T) {
     const newNode: Node<T> = {
       value,
-      prev: null,
+      prev: undefined,
       next: this.head
     };
 
@@ -60,11 +61,12 @@ export class Dequeue<T> {
   }
 
   shift(): T {
+    if (!this._length) { return undefined; }
     const result = this.head;
     this.head = this.head.next;
     this._length--;
     if (!this._length) {
-      this.head = this.tail = null;
+      this.head = this.tail = undefined;
     }
     return result.value;
   }
