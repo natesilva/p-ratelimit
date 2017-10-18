@@ -165,7 +165,7 @@ test.only('Redis quota clients can expire', async t => {
   await qm2.unregister();
   qm2 = null;
 
-  // wait a while for housekeeping
+  // wait a while to ensure housekeeping runs
   await new Promise(resolve => setTimeout(resolve, 2000));
 
   // each remaining quota manager should now have 3 rate units and 1 concurrency unit
