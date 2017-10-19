@@ -58,7 +58,7 @@ class MockApi {
     this.checkRateLimits();
     this.nowRunning++;
     this.invocations.push(Date.now());
-    await new Promise(resolve => setTimeout(resolve, this.waitTime));
+    await sleep(this.waitTime);
     this.nowRunning--;
     this.fulfilled++;
   }
@@ -68,7 +68,7 @@ class MockApi {
     this.checkRateLimits();
     this.nowRunning++;
     this.invocations.push(Date.now());
-    await new Promise(resolve => setTimeout(resolve, this.waitTime));
+    await sleep(this.waitTime);
     this.nowRunning--;
     this.rejected++;
     return Promise.reject(new Error('mock API rejected this Promise'));
@@ -100,11 +100,11 @@ test('concurrency is enforced', async t => {
     rateLimit(() => api.fn())
   ];
 
-  await new Promise(resolve => setTimeout(resolve, 250));
+  await sleep(250);
 
   t.is(api.fulfilled, 2, 'after 250 ms 2 jobs are done');
 
-  await new Promise(resolve => setTimeout(resolve, 200));
+  await sleep(200);
 
   t.is(api.fulfilled, 3, 'after another 200 ms all 3 jobs are done');
 });
@@ -125,10 +125,10 @@ test('rate limits are enforced', async t => {
   ];
 
   t.is(quotaManager.activeCount, 3, 'initially 3 jobs are active');
-  await new Promise(resolve => setTimeout(resolve, 600));
+  await sleep(600);
   t.is(api.fulfilled, 3, 'after 600 ms 3 jobs are done');
   t.is(quotaManager.activeCount, 2, '2 jobs are now active');
-  await new Promise(resolve => setTimeout(resolve, 200));
+  await sleep(400);
   t.is(api.fulfilled, 5, 'all 5 jobs are done');
   t.is(quotaManager.activeCount, 0, 'no jobs are still active');
 });
@@ -149,13 +149,13 @@ test('combined rate limits and concurrency are enforced', async t => {
   ];
 
   t.is(quotaManager.activeCount, 2, 'only 2 jobs are started due to concurrency limit');
-  await new Promise(resolve => setTimeout(resolve, 250));
+  await sleep(250);
   t.is(api.fulfilled, 2, 'after 250 ms 2 jobs are done');
   t.is(quotaManager.activeCount, 1, 'rate limit allowed another job to start');
-  await new Promise(resolve => setTimeout(resolve, 400));
+  await sleep(400);
   t.is(api.fulfilled, 3, 'after another 400 ms 3 jobs are done');
   t.is(quotaManager.activeCount, 2, 'now 2 previously-queued jobs are running');
-  await new Promise(resolve => setTimeout(resolve, 200));
+  await sleep(400);
   t.is(quotaManager.activeCount, 0, 'no jobs are still running');
   t.is(api.fulfilled, 5, 'all jobs are done');
 });
@@ -180,7 +180,7 @@ test('API calls are queued until RedisQuotaManager is ready', async t => {
   t.is(api.fulfilled, 0);
 
   await waitForReady(qm);
-  await new Promise(resolve => setTimeout(resolve, 100));
+  await sleep(100);
 
   t.is(qm.activeCount, promises.length, 'all the jobs are running now');
   t.is(api.fulfilled, 0, 'none of the jobs are completed yet');
