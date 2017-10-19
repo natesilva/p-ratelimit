@@ -7,7 +7,7 @@ This works with any API function that returns a Promise. If your API uses callba
 ## Install
 
 ```
-npm i p-ratelimit
+$ npm i p-ratelimit
 ```
 
 ## What’s different
