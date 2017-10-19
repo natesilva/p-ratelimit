@@ -48,7 +48,7 @@ main();
 
 ## Redis
 
-You can optionally use Redis to coordinate a rate limit among a pool of servers.
+You can use Redis to coordinate a rate limit among a pool of servers.
 
 ```javascript
 const { pRateLimit, RedisQuotaManager } = require('p-ratelimit');
