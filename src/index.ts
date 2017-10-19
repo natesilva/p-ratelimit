@@ -1,4 +1,4 @@
 export { pRateLimit } from './rateLimit';
-export { Quota } from './storage/quota';
-export { QuotaManager } from './storage/quotaManager';
-export { RedisQuotaManager } from './storage/redisQuotaManager';
+export { Quota } from './quota/quota';
+export { QuotaManager } from './quota/quotaManager';
+export { RedisQuotaManager } from './quota/redisQuotaManager';

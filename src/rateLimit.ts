@@ -1,6 +1,6 @@
 import { Dequeue } from './dequeue';
-import { Quota } from './storage/quota';
-import { QuotaManager } from './storage/quotaManager';
+import { Quota } from './quota/quota';
+import { QuotaManager } from './quota/quotaManager';
 
 export function pRateLimit(quotaManager: QuotaManager | Quota)
   : <T>(fn: () => Promise<T>) => Promise<T>
