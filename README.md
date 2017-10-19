@@ -4,6 +4,10 @@ Promise-based utility to make sure you don’t call rate-limited APIs too quickl
 
 This can throttle any function that returns a Promise.
 
+## Install
+
+`npm i p-ratelimit`
+
 ## What’s different
 
 * **True rate limiting**
@@ -26,7 +30,7 @@ const { pRateLimit } = require('p-ratelimit');
 
 // create a rate limiter that allows up to 30 API calls per second,
 // with max concurrency of 10
-const limit = pRateLimit({ 
+const limit = pRateLimit({
     interval: 1000,             // 1000 ms == 1 second
     rate: 30,                   // 30 API calls per interval
     concurrency: 10,            // no more than 10 running at once
@@ -57,8 +61,8 @@ const quota = { rate: 100, interval: 1000, concurrency: 50 };
 
 // Create a RedisQuotaManager
 const qm = new RedisQuotaManager(
-    quota, 
-    channelName, 
+    quota,
+    channelName,
     redisClient
 );
 
