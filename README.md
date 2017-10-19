@@ -1,8 +1,6 @@
 # p-ratelimit
 
-Promise-based utility to make sure you don’t call rate-limited APIs too quickly.
-
-This can throttle any function that returns a Promise.
+Promise-based utility to make sure you don’t call rate-limited APIs too quickly. Throttle any function that returns a Promise.
 
 ## Install
 
