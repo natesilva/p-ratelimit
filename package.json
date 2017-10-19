@@ -1,7 +1,8 @@
 {
   "name": "p-ratelimit",
-  "version": "1.0.0",
+  "version": "0.7.0",
   "description": "Makes sure you don’t call rate-limited APIs too quickly",
+  "repository": "natesilva/p-ratelimit",
   "license": "MIT",
   "author": "Nate Silva <nate@natesilva.com>",
   "main": ".build/src/index.js",
