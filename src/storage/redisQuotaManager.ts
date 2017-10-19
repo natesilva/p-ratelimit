@@ -78,7 +78,7 @@ export class RedisQuotaManager extends QuotaManager {
   }
 
   /** Remove outdated clients */
-  private removeOutdatedClientPings() {
+  private removeOutdatedClients() {
     const ancient = Date.now() - this.heartbeatInterval * 3;
     const expired = [...this.pingsReceived].filter(([k, v]) => v <= ancient);
     expired.forEach(([k, v]) => this.pingsReceived.delete(k));
@@ -86,7 +86,7 @@ export class RedisQuotaManager extends QuotaManager {
 
   /** Calculate our portion of the overall channel quota */
   private updateQuota() {
-    this.removeOutdatedClientPings();
+    this.removeOutdatedClients();
     if (!this.pingsReceived.size) {
       return;
     }
