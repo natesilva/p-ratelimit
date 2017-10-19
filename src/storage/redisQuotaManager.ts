@@ -45,12 +45,6 @@ export class RedisQuotaManager extends QuotaManager {
     this.heartbeatTimer = setInterval(() => this.heartbeat(), this.heartbeatInterval);
   }
 
-  public unregister() {
-    this._ready = false;
-    clearInterval(this.heartbeatTimer);
-    this.pubSubClient.unsubscribe();
-  }
-
   /** Send a ping to the shared Redis channel */
   private ping() {
     this.client.publish(this.channelName, JSON.stringify(this.uniqueId));
