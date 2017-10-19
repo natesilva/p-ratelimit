@@ -18,7 +18,6 @@ test('Redis quota manager works', async t => {
 
   await qm.ready;
 
-  let canStart: boolean;
   t.is(qm.start(), true, 'start job (1)');
   t.is(qm.start(), true, 'start job (2)');
   t.is(qm.start(), false, 'would exceed max concurrency of 2');
