@@ -191,7 +191,7 @@ test('API calls are queued until RedisQuotaManager is ready', async t => {
 });
 
 test('can handle API calls that reject', async t => {
-  const quota: Quota = { interval: 500, rate: 3, concurrency: 2 };
+  const quota: Quota = { interval: 500, rate: 10, concurrency: 10 };
   const rateLimit = pRateLimit(quota);
 
   const api = new MockApi(quota, 200);
