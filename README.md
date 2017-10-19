@@ -14,7 +14,7 @@ This can throttle any function that returns a Promise.
     * **p-ratelimit** can enforce a single shared quota for all functions in an API family.
 * **Distributed rate limits**
     * If you use Redis, **p-ratelimit** supports efficient rate limiting across multiple hosts. The available quota is divided among your pool of servers. As servers are added or removed, the shared quota is recaclulated.
-* **Designed for Promises and TypeScript friendly**
+* **Made for Promises and TypeScript friendly**
     * A rate-limited function returns the same Promise type as the original function.
 
 
@@ -26,13 +26,17 @@ const { pRateLimit } = require('p-ratelimit');
 
 // create a rate limiter that allows up to 30 API calls per second,
 // with max concurrency of 10
-const rateLimiter = pRateLimit({ rate: 30, interval: 1000, concurrency: 10 });
+const limit = pRateLimit({ 
+    interval: 1000,             // 1000 ms == 1 second
+    rate: 30,                   // 30 API calls per interval
+    concurrency: 10,            // no more than 10 running at once
+});
 
 async function main() {
   // original WITHOUT rate limiter:
   result = await someApi.someFunction(42);
   // with rate limiter:
-  result = await rateLimiter(() => someApi.someFunction(42));
+  result = await limit(() => someApi.someFunction(42));
 }
 
 main();
@@ -40,26 +44,30 @@ main();
 
 ## Redis
 
-You can optionally use Redis to coordinate rate limits among a pool of servers.
+You can optionally use Redis to coordinate a rate limit among a pool of servers.
 
 ```javascript
 const { pRateLimit, RedisQuotaManager } = require('p-ratelimit');
 
-// make sure this is the same across all servers that share this rate limit quota
-const apiFamilyName = 'my-api-family';
-
-// because we use Redis pub/sub we need two Redis client instances
-const client = redis.createClient(6379, 'your-redis-server');
-const pubSubClient = redis.createClient(6379, 'your-redis-server');
+// This name must be the same across all servers that share this
+// rate limit quota:
+const channelName = 'my-api-family';
 
 const quota = { rate: 100, interval: 1000, concurrency: 50 };
-const qm = new RedisQuotaManager(quota, apiFamilyName, client, pubSubClient);
-const rateLimiter = pRateLimit(qm);
 
-// Each server that registers with this apiFamilyName will be allotted
-// 1/(number of servers) of the available quota. If a new server joins, the quota will
-// be divided further and each server will be notified via Redis pub/sub. If a server goes
-// away, its quota will be reallocated among the remaining servers within a few minutes.
+// Create a RedisQuotaManager
+const qm = new RedisQuotaManager(
+    quota, 
+    channelName, 
+    redisClient
+);
 
-// now use rateLimiter(…) as usual
+// Create a rate limiter that uses the RedisQuotaManager
+const limit = pRateLimit(qm);
+
+// now use limit(…) as usual
 ```
+
+Each server that registers with a given `channelName` will be allotted `1/(number of servers)` of the available quota. For example, if the pool consists of four servers, each will receive 1/4 the available quota.
+
+When a new server joins the pool, the quota is dynamically adjusted. If a server goes away, its quota is reallocated among the remaining servers within a few minutes.
