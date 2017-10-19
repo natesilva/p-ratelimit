@@ -73,3 +73,7 @@ const limit = pRateLimit(qm);
 Each server that registers with a given `channelName` will be allotted `1/(number of servers)` of the available quota. For example, if the pool consists of four servers, each will receive 1/4 the available quota.
 
 When a new server joins the pool, the quota is dynamically adjusted. If a server goes away, its quota is reallocated among the remaining servers within a few minutes.
+
+## License
+
+MIT © Nate Silva
