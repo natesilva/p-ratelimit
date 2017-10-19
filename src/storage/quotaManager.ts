@@ -4,7 +4,7 @@ import { Quota } from './quota';
 /** keep track of API invocations, allowing or disallowing them based on our quota */
 export class QuotaManager {
   protected _activeCount = 0;
-  protected dequeue = new Dequeue()
+  protected history = new Dequeue()
 
   constructor(protected _quota: Quota) {}
 
@@ -23,8 +23,8 @@ export class QuotaManager {
 
     if (this._quota.interval !== undefined && this._quota.rate !== undefined) {
       this.removeExpired();
-      if (this.dequeue.length >= this._quota.rate) { return false; }
-      this.dequeue.push(Date.now());
+      if (this.history.length >= this._quota.rate) { return false; }
+      this.history.push(Date.now());
     }
 
     this._activeCount++;
@@ -34,15 +34,12 @@ export class QuotaManager {
   /** Log that an invocation ended */
   end() {
     this._activeCount--;
-    if (this._quota.interval !== undefined && this._quota.rate !== undefined) {
-      this.removeExpired();
-    }
   }
 
   protected removeExpired() {
-    const now = Date.now();
-    while (this.dequeue.peekFront() < Date.now() - this._quota.interval) {
-      this.dequeue.shift();
+    const expired = Date.now() - this._quota.interval;
+    while (this.history.peekFront() < expired) {
+      this.history.shift();
     }
   }
 }
