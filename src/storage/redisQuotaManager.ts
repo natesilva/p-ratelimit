@@ -29,6 +29,9 @@ export class RedisQuotaManager extends QuotaManager {
     this.register();
   }
 
+  /** true once the Quota Manager has discovered its peers and calculated its quota */
+  get ready() { return this._ready; }
+
   /** Join the client pool, coordinated by the shared channel on Redis */
   private async register() {
     this.pingsReceived.set(this.uniqueId, Date.now());
@@ -68,7 +71,7 @@ export class RedisQuotaManager extends QuotaManager {
 
     if (newClient) {
       this.ping();
-      if (this._ready) {
+      if (this.ready) {
         this.updateQuota();
       }
     }
@@ -100,7 +103,7 @@ export class RedisQuotaManager extends QuotaManager {
   /** Let the others know we’re here */
   private heartbeat() {
     this.ping();
-    if (this._ready) {
+    if (this.ready) {
       this.updateQuota();
     }
   }
