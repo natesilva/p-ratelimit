@@ -2,16 +2,27 @@ import * as redis from 'redis';
 
 import { Quota, QuotaManager, RedisQuotaManager } from '../src';
 
+import { Dequeue } from '../src/dequeue';
 import { RedisClient } from 'redis';
 import { pRateLimit } from '../src/rateLimit';
 import test from 'ava';
-import { uniqueId } from '../src/util';
-import { Dequeue } from '../src/dequeue';
+import { uniqueId, sleep } from '../src/util';
 
 // testing requires a real Redis server
 // fakeredis, redis-mock, redis-js, etc. have missing or broken client.duplicate()
 const REDIS_SERVER = 'localhost';
 const REDIS_PORT = 6379;
+
+/** Wait until the RQM is online */
+async function waitForReady(rqm: RedisQuotaManager) {
+  const expireAt = Date.now() + 5000;
+  while (!rqm.ready) {
+    if (Date.now() >= expireAt) {
+      throw new Error('RedisQuotaManager still not ready after 5 seconds');
+    }
+    await sleep(100);
+  }
+}
 
 /** Create a mock rate-limited API function. */
 class MockApi {
@@ -168,7 +179,7 @@ test('API calls are queued until RedisQuotaManager is ready', async t => {
   t.is(qm.activeCount, 0);
   t.is(api.fulfilled, 0);
 
-  await qm.ready;
+  await waitForReady(qm);
   await new Promise(resolve => setTimeout(resolve, 100));
 
   t.is(qm.activeCount, promises.length, 'all the jobs are running now');
