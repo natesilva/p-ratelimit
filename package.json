@@ -12,6 +12,15 @@
     "coverage": "npm run prepare && nyc --reporter lcov --reporter text ava ./.build/test",
     "prepare": "del-cli .build && tsc"
   },
+  "keywords": [
+    "ratelimit",
+    "concurrency",
+    "promise",
+    "promises",
+    "limit",
+    "throttle",
+    "tokenbucket"
+  ],
   "engines": {
     "node": ">=6.10.3"
   },
