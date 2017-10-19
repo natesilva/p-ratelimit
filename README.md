@@ -1,6 +1,8 @@
 # p-ratelimit
 
-> Promise-based utility to make sure you don’t call rate-limited APIs too quickly.
+> Makes sure you don’t call rate-limited APIs too quickly.
+
+This works with any API function that returns a Promise. If your API uses callbacks instead of Promises, you could [promisify](https://nodejs.org/api/util.html#util_util_promisify_original) it.
 
 ## Install
 
@@ -37,9 +39,9 @@ const limit = pRateLimit({
 
 async function main() {
   // original WITHOUT rate limiter:
-  result = await someFunctionThatReturnsAPromise(42);
+  result = await someFunction(42);
   // with rate limiter:
-  result = await limit(() => someFunctionThatReturnsAPromise(42));
+  result = await limit(() => someFunction(42));
 }
 
 main();
