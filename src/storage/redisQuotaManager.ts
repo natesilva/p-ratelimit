@@ -9,6 +9,7 @@ export class RedisQuotaManager extends QuotaManager {
   private readonly uniqueId = uniqueId();
   private readonly pubSubClient: RedisClient;
   private readonly pingsReceived = new Map<string, number>();
+  private readonly channelName: string;
   private _ready = false;
   private heartbeatTimer: any = null;
 
@@ -20,11 +21,12 @@ export class RedisQuotaManager extends QuotaManager {
    */
   constructor(
     private readonly channelQuota: Quota,
-    private readonly channelName: string,
+    channelName: string,
     private readonly client: RedisClient,
     private readonly heartbeatInterval = 30000
   ) {
     super({ interval: 1000, rate: 0, concurrency: 0 });
+    this.channelName = `ratelimit-${channelName}`;
     this.pubSubClient = this.client.duplicate();
     this.register();
   }
