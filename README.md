@@ -53,10 +53,8 @@ You can use Redis to coordinate a rate limit among a pool of servers.
 ```javascript
 const { pRateLimit, RedisQuotaManager } = require('p-ratelimit');
 
-// This name must be the same across all servers that share this
-// rate limit quota:
+// These must be the same across all servers that share this quota:
 const channelName = 'my-api-family';
-
 const quota = { rate: 100, interval: 1000, concurrency: 50 };
 
 // Create a RedisQuotaManager
