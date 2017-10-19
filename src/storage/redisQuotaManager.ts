@@ -1,4 +1,4 @@
-import { sleep, uniqueId } from '../util';
+import { promisify, sleep, uniqueId } from '../util';
 
 import { Quota } from './quota';
 import { QuotaManager } from './quotaManager';
@@ -37,7 +37,7 @@ export class RedisQuotaManager extends QuotaManager {
     this.pingsReceived.set(this.uniqueId, Date.now());
 
     this.pubSubClient.on('message', (channel, message) => this.message(channel, message));
-    this.pubSubClient.subscribe(this.channelName);
+    await promisify(this.pubSubClient.subscribe.bind(this.pubSubClient))(this.channelName);
 
     this.ping();
 
