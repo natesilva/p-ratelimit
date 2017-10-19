@@ -37,25 +37,8 @@ class MockApi {
    */
   constructor(private readonly quota: Quota, private readonly waitTime = 200) { }
 
-  private checkRateLimits() {
-    if (this.quota.concurrency !== undefined && this.nowRunning >= this.quota.concurrency) {
-      this.rejected++;
-      throw new Error(`too many concurrent invocations - ${this.nowRunning} already running`);
-    }
-
-    if (this.quota.interval && this.quota.rate) {
-      const expired = Date.now() - this.quota.interval;
-      while (this.invocations.peekFront() < expired) { this.invocations.shift(); }
-      if (this.invocations.length >= this.quota.rate) {
-        this.rejected++;
-        throw new Error(`rate limiting prevents this from running`);
-      }
-    }
-  }
-
   /** API function that rejects if rate limits are exceeded, fulfills otherwise. */
   async fn() {
-    this.checkRateLimits();
     this.nowRunning++;
     this.invocations.push(Date.now());
     await sleep(this.waitTime);
@@ -65,7 +48,6 @@ class MockApi {
 
   /** API function that always rejects. */
   async reject() {
-    this.checkRateLimits();
     this.nowRunning++;
     this.invocations.push(Date.now());
     await sleep(this.waitTime);
