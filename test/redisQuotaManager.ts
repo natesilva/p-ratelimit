@@ -20,6 +20,7 @@ async function waitForReady(rqm: RedisQuotaManager) {
     }
     await sleep(100);
   }
+  await sleep(100);
 }
 
 test('Redis quota manager works', async t => {
