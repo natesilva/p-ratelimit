@@ -66,6 +66,7 @@ export class RedisQuotaManager extends QuotaManager {
       uniqueId = JSON.parse(message);
     } catch {
       console.error(`invalid JSON on Redis pub/sub channel ${channel}: ${message}`);
+      return;
     }
 
     const newClient = !this.pingsReceived.has(uniqueId);
