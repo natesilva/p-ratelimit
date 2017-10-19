@@ -27,13 +27,19 @@ export function pRateLimit(quotaManager: QuotaManager | Quota)
 
   return <T>(fn: () => Promise<T>) => {
     return new Promise<T>((resolve, reject) => {
-      const run = () => fn()
-        .then(val => resolve(val))
-        .catch(err => reject(err))
-        .then(() => {
-          quotaManager.end();
-          next();
-        })
+      const run = () =>
+        fn()
+          .then(val => {
+            resolve(val);
+          })
+          .catch(err => {
+            reject(err);
+          })
+          .then(() => {
+            quotaManager.end();
+            next();
+          })
+        ;
       ;
 
       queue.push(run);
