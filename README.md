@@ -1,10 +1,12 @@
 # p-ratelimit
 
-Promise-based utility to make sure you don’t call rate-limited APIs too quickly. Throttle any function that returns a Promise.
+> Promise-based utility to make sure you don’t call rate-limited APIs too quickly.
 
 ## Install
 
-`npm i p-ratelimit`
+```
+npm i p-ratelimit
+```
 
 ## What’s different
 
@@ -18,7 +20,6 @@ Promise-based utility to make sure you don’t call rate-limited APIs too quickl
     * If you use Redis, **p-ratelimit** supports efficient rate limiting across multiple hosts. The available quota is divided among your pool of servers. As servers are added or removed, the shared quota is recaclulated.
 * **Made for Promises and TypeScript friendly**
     * A rate-limited function returns the same Promise type as the original function.
-
 
 ## Example
 
@@ -36,9 +37,9 @@ const limit = pRateLimit({
 
 async function main() {
   // original WITHOUT rate limiter:
-  result = await someApi.someFunction(42);
+  result = await someFunctionThatReturnsAPromise(42);
   // with rate limiter:
-  result = await limit(() => someApi.someFunction(42));
+  result = await limit(() => someFunctionThatReturnsAPromise(42));
 }
 
 main();
