@@ -8,3 +8,11 @@ coverage
 
 # unit tests
 test
+.build/test
+
+# pre-transpiled source
+src
+
+# transpiler settings
+tsconfig.json
+tslint.json
