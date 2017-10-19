@@ -1,4 +1,4 @@
-# p-ratelimit
+# p-ratelimit [![npm version](https://badge.fury.io/js/p-ratelimit.svg)](https://badge.fury.io/js/p-ratelimit)
 
 > Makes sure you don’t call rate-limited APIs too quickly.
 
