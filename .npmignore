@@ -7,11 +7,11 @@ coverage
 .editorconfig
 
 # unit tests
-test
-.build/test
+test/
+build/test/
 
 # pre-transpiled source
-src
+src/
 
 # transpiler settings
 tsconfig.json

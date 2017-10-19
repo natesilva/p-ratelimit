@@ -4,7 +4,7 @@
     "test/**/*"
   ],
   "compilerOptions": {
-    "outDir": ".build",
+    "outDir": "build",
     "target": "ES2015",
     "module": "commonjs",
     "sourceMap": true,

@@ -5,12 +5,12 @@
   "repository": "natesilva/p-ratelimit",
   "license": "MIT",
   "author": "Nate Silva <nate@natesilva.com>",
-  "main": ".build/src/index.js",
-  "types": ".build/src/index.d.ts",
+  "main": "build/src/index.js",
+  "types": "build/src/index.d.ts",
   "scripts": {
-    "test": "npm run prepare && ava --verbose ./.build/test",
-    "coverage": "npm run prepare && nyc --reporter lcov --reporter text ava ./.build/test",
-    "prepare": "del-cli .build && tsc"
+    "test": "npm run prepare && ava --verbose ./build/test",
+    "coverage": "npm run prepare && nyc --reporter lcov --reporter text ava ./build/test",
+    "prepare": "del-cli build && tsc"
   },
   "keywords": [
     "ratelimit",
