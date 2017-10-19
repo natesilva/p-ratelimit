@@ -47,7 +47,7 @@ async function main() {
 main();
 ```
 
-## Redis
+## Distributed rate limits
 
 You can use Redis to coordinate a rate limit among a pool of servers.
 
