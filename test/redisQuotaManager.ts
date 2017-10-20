@@ -30,24 +30,23 @@ test('Redis quota manager works', async t => {
 
   await waitForReady(qm);
 
-  t.is(qm.start(), true, 'start job (1)');
-  t.is(qm.start(), true, 'start job (2)');
-  t.is(qm.start(), false, 'would exceed max concurrency of 2');
+  t.true(qm.start(), 'start job (1)');
+  t.true(qm.start(), 'start job (2)');
+  t.false(qm.start(), 'would exceed max concurrency of 2');
   qm.end();
-  t.is(qm.start(), true, 'start job (3)');
+  t.true(qm.start(), 'start job (3)');
   t.is(qm.activeCount, 2);
-  t.is(qm.start(), false, 'would exceed quota of 3 per 1/2 second');
-  t.is(qm.activeCount, 2, 'still 2 running');
+  t.false(qm.start(), 'would exceed quota of 3 per 1/2 second');
   qm.end();
   t.is(qm.activeCount, 1, 'still 1 running');
-  t.is(qm.start(), false, 'still would exceed quota of 3 per 1/2 second');
-  await new Promise(resolve => setTimeout(resolve, 600));
-  t.is(qm.activeCount, 1, 'still 1 running, after timeout');
-  t.is(qm.start(), true, 'start job (4)');
+  t.false(qm.start(), 'still would exceed quota of 3 per 1/2 second');
+  await sleep(600);
+  t.is(qm.activeCount, 1, 'still 1 running, after sleep');
+  t.true(qm.start(), 'start job (4)');
   t.is(qm.activeCount, 2, 'still 2 running');
-  t.is(qm.start(), false, 'would exceed max concurrency of 2');
+  t.false(qm.start(), 'would exceed max concurrency of 2');
   qm.end();
-  t.is(qm.start(), true, 'start job (5)');
+  t.true(qm.start(), 'start job (5)');
   t.is(qm.activeCount, 2, 'still 2 running');
   qm.end();
   qm.end();
@@ -70,28 +69,11 @@ test('separate Redis quota managers coordinate', async t => {
     rate: Math.floor(quota.rate / 2),
     concurrency: Math.floor(quota.concurrency / 2)
   };
+
   const actualQuota1 = qm1.quota;
   t.deepEqual(actualQuota1, expectedQuota, 'client 1 has the correct quota');
   const actualQuota2 = qm2.quota;
   t.deepEqual(actualQuota2, expectedQuota, 'client 2 has the correct quota');
-
-  t.is(qm1.start(), true, 'job 1 started on client 1');
-  t.is(qm2.start(), true, 'job 2 started on client 2');
-  t.is(qm1.start(), false, 'would exceed the per-client max concurrency of 1');
-  qm1.end();
-  t.is(qm1.start(), true, 'job 3 started on client 1');
-  t.is(qm1.activeCount, 1, '1 job active on client 1');
-  t.is(qm2.activeCount, 1, '1 job active on client 2');
-  qm2.end();
-  t.is(qm2.activeCount, 0, 'no jobs active on client 2');
-  qm1.end();
-  t.is(qm1.activeCount, 0, 'no jobs active on client 1');
-  t.is(qm1.start(), false, 'would exceed per-client rate of 2 per 500 ms');
-  t.is(qm1.activeCount, 0, 'no jobs active on client 1');
-  t.is(qm2.start(), true, 'job 4 started on client 2');
-  t.is(qm2.activeCount, 1, '1 job active on client 2');
-  qm2.end();
-  t.is(qm2.activeCount, 0, 'no jobs active on client 2');
 });
 
 test('Redis quota can be updated', async t => {

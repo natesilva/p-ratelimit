@@ -22,39 +22,25 @@ async function waitForReady(rqm: RedisQuotaManager) {
     }
     await sleep(100);
   }
+  await sleep(100);
 }
 
-/** Create a mock rate-limited API function. */
-class MockApi {
-  public nowRunning = 0;
-  public fulfilled = 0;
-  public rejected = 0;
-  private invocations = new Dequeue();
+function mockApi(sleepTime: number) {
+  const fn = async (err: Error = null): Promise<void> => {
+    fn['runCount']++;
+    if (err) {
+      fn['rejectCount']++;
+      throw err;
+    }
+    await sleep(sleepTime);
+    fn['fulfillCount']++;
+  };
 
-  /**
-   * @param quota the quota to be enforced by this API
-   * @param waitTime how long the function should sleep (simulates latency)
-   */
-  constructor(private readonly quota: Quota, private readonly waitTime = 200) { }
+  fn['runCount'] = 0;
+  fn['rejectCount'] = 0;
+  fn['fulfillCount'] = 0;
 
-  /** API function that rejects if rate limits are exceeded, fulfills otherwise. */
-  async fn() {
-    this.nowRunning++;
-    this.invocations.push(Date.now());
-    await sleep(this.waitTime);
-    this.nowRunning--;
-    this.fulfilled++;
-  }
-
-  /** API function that always rejects. */
-  async reject() {
-    this.nowRunning++;
-    this.invocations.push(Date.now());
-    await sleep(this.waitTime);
-    this.nowRunning--;
-    this.rejected++;
-    return Promise.reject(new Error('mock API rejected this Promise'));
-  }
+  return fn;
 }
 
 test('can construct from a Quota object', async t => {
@@ -74,21 +60,21 @@ test('concurrency is enforced', async t => {
   const quota: Quota = { concurrency: 2 };
   const rateLimit = pRateLimit(quota);
 
-  const api = new MockApi(quota, 200);
+  const api = mockApi(500);
 
   const promises = [
-    rateLimit(() => api.fn()),
-    rateLimit(() => api.fn()),
-    rateLimit(() => api.fn())
+    rateLimit(() => api()),
+    rateLimit(() => api()),
+    rateLimit(() => api())
   ];
 
-  await sleep(250);
+  await sleep(600);
 
-  t.is(api.fulfilled, 2, 'after 250 ms 2 jobs are done');
+  t.is(api['fulfillCount'], 2, 'after 600 ms 2 jobs are done');
 
-  await sleep(200);
+  await sleep(600);
 
-  t.is(api.fulfilled, 3, 'after another 200 ms all 3 jobs are done');
+  t.is(api['fulfillCount'], 3, 'after another 600 ms all 3 jobs are done');
 });
 
 test('rate limits are enforced', async t => {
@@ -96,50 +82,70 @@ test('rate limits are enforced', async t => {
   const quotaManager = new QuotaManager(quota);
   const rateLimit = pRateLimit(quotaManager);
 
-  const api = new MockApi(quota, 200);
+  const api = mockApi(500);
+
+  const startTime = Date.now();
 
   const promises = [
-    rateLimit(() => api.fn()),
-    rateLimit(() => api.fn()),
-    rateLimit(() => api.fn()),
-    rateLimit(() => api.fn()),
-    rateLimit(() => api.fn())
+    rateLimit(() => api()),   // 0-500 ms
+    rateLimit(() => api()),   // 0-500 ms
+    rateLimit(() => api()),   // 0-500 ms
+    rateLimit(() => api()),   // 500-1000 ms
+    rateLimit(() => api())    // 500-1000 ms
   ];
 
-  t.is(quotaManager.activeCount, 3, 'initially 3 jobs are active');
-  await sleep(600);
-  t.is(api.fulfilled, 3, 'after 600 ms 3 jobs are done');
-  t.is(quotaManager.activeCount, 2, '2 jobs are now active');
-  await sleep(400);
-  t.is(api.fulfilled, 5, 'all 5 jobs are done');
-  t.is(quotaManager.activeCount, 0, 'no jobs are still active');
+  while (true) {
+    const elapsed = Date.now() - startTime;
+    if (elapsed < 500) {
+      t.is(quotaManager.activeCount, 3, 'at t < 500, 3 jobs are active');
+      t.is(api['fulfillCount'], 0, 'at t < 500, 0 jobs are done');
+    } else if (elapsed > 700 && elapsed < 1000) {
+      t.is(quotaManager.activeCount, 2, 'at 500 < t < 1000, 2 jobs are active')
+      t.is(api['fulfillCount'], 3, 'at 500 < t < 1000, 3 jobs are done');
+    } else if (elapsed > 1200) {
+      t.is(quotaManager.activeCount, 0, 'at t > 1200, 0 jobs are active')
+      t.is(api['fulfillCount'], 5, 'at t > 1200, 5 jobs are done');
+      break;
+    }
+    await sleep(200);
+  }
 });
 
 test('combined rate limits and concurrency are enforced', async t => {
-  const quota: Quota = { interval: 500, rate: 3, concurrency: 2 };
+  const quota: Quota = { interval: 1000, rate: 3, concurrency: 2 };
   const quotaManager = new QuotaManager(quota);
   const rateLimit = pRateLimit(quotaManager);
 
-  const api = new MockApi(quota, 200);
+  const api = mockApi(500);
+
+  const startTime = Date.now();
 
   const promises = [
-    rateLimit(() => api.fn()),
-    rateLimit(() => api.fn()),
-    rateLimit(() => api.fn()),
-    rateLimit(() => api.fn()),
-    rateLimit(() => api.fn())
+    rateLimit(() => api()),   // 0-500 ms
+    rateLimit(() => api()),   // 0-500 ms
+    rateLimit(() => api()),   // 500-1000 ms
+    rateLimit(() => api()),   // 1000-1500 ms
+    rateLimit(() => api())    // 1000-1500 ms
   ];
 
-  t.is(quotaManager.activeCount, 2, 'only 2 jobs are started due to concurrency limit');
-  await sleep(250);
-  t.is(api.fulfilled, 2, 'after 250 ms 2 jobs are done');
-  t.is(quotaManager.activeCount, 1, 'rate limit allowed another job to start');
-  await sleep(400);
-  t.is(api.fulfilled, 3, 'after another 400 ms 3 jobs are done');
-  t.is(quotaManager.activeCount, 2, 'now 2 previously-queued jobs are running');
-  await sleep(400);
-  t.is(quotaManager.activeCount, 0, 'no jobs are still running');
-  t.is(api.fulfilled, 5, 'all jobs are done');
+  while (true) {
+    const elapsed = Date.now() - startTime;
+    if (elapsed < 500) {
+      t.is(quotaManager.activeCount, 2, 'at t < 500, 2 jobs are active');
+      t.is(api['fulfillCount'], 0, 'at t < 500, 0 jobs are done');
+    } else if (elapsed > 700 && elapsed < 1000) {
+      t.is(quotaManager.activeCount, 1, 'at 500 < t < 1000, 1 job is active')
+      t.is(api['fulfillCount'], 2, 'at 500 < t < 1000, 2 jobs are done');
+    } else if (elapsed > 1200 && elapsed < 1500) {
+      t.is(quotaManager.activeCount, 2, 'at 1000 < t < 1500, 2 jobs are active')
+      t.is(api['fulfillCount'], 3, 'at 1000 < t < 1500, 3 jobs are done');
+    } else if (elapsed > 1700) {
+      t.is(quotaManager.activeCount, 0, 'at t > 1200, 0 jobs are active')
+      t.is(api['fulfillCount'], 5, 'at t > 1200, 5 jobs are done');
+      break;
+    }
+    await sleep(200);
+  }
 });
 
 test('API calls are queued until RedisQuotaManager is ready', async t => {
@@ -149,41 +155,42 @@ test('API calls are queued until RedisQuotaManager is ready', async t => {
 
   const rateLimit = pRateLimit(qm);
 
-  const api = new MockApi(quota, 200);
+  const api = mockApi(500);
+
   const promises = [
-    rateLimit(() => api.fn()),
-    rateLimit(() => api.fn()),
-    rateLimit(() => api.fn()),
-    rateLimit(() => api.fn()),
-    rateLimit(() => api.fn())
+    rateLimit(() => api()),
+    rateLimit(() => api()),
+    rateLimit(() => api()),
+    rateLimit(() => api()),
+    rateLimit(() => api())
   ];
 
   t.is(qm.activeCount, 0);
-  t.is(api.fulfilled, 0);
+  t.is(api['fulfillCount'], 0);
 
   await waitForReady(qm);
-  await sleep(100);
 
   t.is(qm.activeCount, promises.length, 'all the jobs are running now');
-  t.is(api.fulfilled, 0, 'none of the jobs are completed yet');
+  t.is(api['fulfillCount'], 0, 'none of the jobs are completed yet');
 
   await Promise.all(promises);
+
   t.is(qm.activeCount, 0, 'no jobs are running now');
-  t.is(api.fulfilled, promises.length, 'all of the jobs are completed');
+  t.is(api['fulfillCount'], promises.length, 'all of the jobs are completed');
 });
 
 test('can handle API calls that reject', async t => {
   const quota: Quota = { interval: 500, rate: 10, concurrency: 10 };
   const rateLimit = pRateLimit(quota);
 
-  const api = new MockApi(quota, 200);
+  const api = mockApi(200);
 
   const promises = [
-    rateLimit(() => api.fn()),
-    rateLimit(() => api.reject()),
-    rateLimit(() => api.fn()),
-    rateLimit(() => api.reject()),
-    rateLimit(() => api.fn())
+    rateLimit(() => api()),
+    rateLimit(() => api(new Error())),
+    rateLimit(() => api()),
+    rateLimit(() => api(new Error())),
+    rateLimit(() => api())
   ];
 
   await t.throws(Promise.all(promises));
@@ -194,6 +201,6 @@ test('can handle API calls that reject', async t => {
     catch { /* ignore */ }
   }));
 
-  t.is(api.rejected, 2, '2 Promises were rejected');
-  t.is(api.fulfilled, 3, '3 Promises were fulfilled');
+  t.is(api['rejectCount'], 2, '2 Promises were rejected');
+  t.is(api['fulfillCount'], 3, '3 Promises were fulfilled');
 });
