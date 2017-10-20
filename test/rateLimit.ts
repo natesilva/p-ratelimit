@@ -62,19 +62,26 @@ test('concurrency is enforced', async t => {
 
   const api = mockApi(500);
 
+  const startTime = Date.now();
+
   const promises = [
-    rateLimit(() => api()),
-    rateLimit(() => api()),
-    rateLimit(() => api())
+    rateLimit(() => api()),   // 0-500 ms
+    rateLimit(() => api()),   // 0-500 ms
+    rateLimit(() => api())    // 500-1000 ms
   ];
 
-  await sleep(600);
-
-  t.is(api['fulfillCount'], 2, 'after 600 ms 2 jobs are done');
-
-  await sleep(600);
-
-  t.is(api['fulfillCount'], 3, 'after another 600 ms all 3 jobs are done');
+  while (true) {
+    const elapsed = Date.now() - startTime;
+    if (elapsed < 500) {
+      t.is(api['fulfillCount'], 0, 'at t < 500, 0 jobs are done');
+    } else if (elapsed > 600 && elapsed < 900) {
+      t.is(api['fulfillCount'], 2, 'at 500 < t < 1000, 2 jobs are done');
+    } else if (elapsed > 1200) {
+      t.is(api['fulfillCount'], 3, 'at t > 1200, 3 jobs are done');
+      break;
+    }
+    await sleep(200);
+  }
 });
 
 test('rate limits are enforced', async t => {
