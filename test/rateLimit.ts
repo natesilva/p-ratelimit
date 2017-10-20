@@ -94,25 +94,21 @@ test('rate limits are enforced', async t => {
     rateLimit(() => api())    // 500-1000 ms
   ];
 
-  t.is(quotaManager.activeCount, 3, '3 jobs are active');
-  t.is(api['fulfillCount'], 0, 'no jobs are done');
-
-  while (api['fulfillCount'] < 3) {
-    await sleep(100);
+  while (true) {
+    const elapsed = Date.now() - startTime;
+    if (elapsed < 500) {
+      t.is(quotaManager.activeCount, 3, 'at t < 500, 3 jobs are active');
+      t.is(api['fulfillCount'], 0, 'at t < 500, 0 jobs are done');
+    } else if (elapsed > 600 && elapsed < 900) {
+      t.is(quotaManager.activeCount, 2, 'at 500 < t < 1000, 2 jobs are active')
+      t.is(api['fulfillCount'], 3, 'at 500 < t < 1000, 3 jobs are done');
+    } else if (elapsed > 1200) {
+      t.is(quotaManager.activeCount, 0, 'at t > 1200, 0 jobs are active')
+      t.is(api['fulfillCount'], 5, 'at t > 1200, 5 jobs are done');
+      break;
+    }
+    await sleep(200);
   }
-
-  let elapsed = Date.now() - startTime;
-  t.true(elapsed > 500);
-  await sleep(100);
-  t.is(quotaManager.activeCount, 2, '2 jobs are active');
-
-  while (api['fulfillCount'] < 5) {
-    await sleep(100);
-  }
-
-  elapsed = Date.now() - startTime;
-  t.true(elapsed > 1000);
-  t.is(quotaManager.activeCount, 0, '0 jobs are active');
 });
 
 test('combined rate limits and concurrency are enforced', async t => {
@@ -132,34 +128,24 @@ test('combined rate limits and concurrency are enforced', async t => {
     rateLimit(() => api())    // 1000-1500 ms
   ];
 
-  t.is(quotaManager.activeCount, 2, '2 jobs are active');
-  t.is(api['fulfillCount'], 0, 'no jobs are done');
-
-  while (api['fulfillCount'] < 2) {
-    await sleep(100);
+  while (true) {
+    const elapsed = Date.now() - startTime;
+    if (elapsed < 500) {
+      t.is(quotaManager.activeCount, 2, 'at t < 500, 2 jobs are active');
+      t.is(api['fulfillCount'], 0, 'at t < 500, 0 jobs are done');
+    } else if (elapsed > 600 && elapsed < 900) {
+      t.is(quotaManager.activeCount, 1, 'at 500 < t < 1000, 1 job is active')
+      t.is(api['fulfillCount'], 2, 'at 500 < t < 1000, 2 jobs are done');
+    } else if (elapsed > 1100 && elapsed < 1400) {
+      t.is(quotaManager.activeCount, 2, 'at 1000 < t < 1500, 2 jobs are active')
+      t.is(api['fulfillCount'], 3, 'at 1000 < t < 1500, 3 jobs are done');
+    } else if (elapsed > 1700) {
+      t.is(quotaManager.activeCount, 0, 'at t > 1200, 0 jobs are active')
+      t.is(api['fulfillCount'], 5, 'at t > 1200, 5 jobs are done');
+      break;
+    }
+    await sleep(200);
   }
-
-  let elapsed = Date.now() - startTime;
-  t.true(elapsed > 500);
-  await sleep(100);
-  t.is(quotaManager.activeCount, 1, '1 job is active');
-
-  while (api['fulfillCount'] < 3) {
-    await sleep(100);
-  }
-
-  elapsed = Date.now() - startTime;
-  t.true(elapsed > 1000);
-  await sleep(100);
-  t.is(quotaManager.activeCount, 2, '2 jobs are active');
-
-  while (api['fulfillCount'] < 5) {
-    await sleep(100);
-  }
-
-  elapsed = Date.now() - startTime;
-  t.true(elapsed > 1500);
-  t.is(quotaManager.activeCount, 0, '0 jobs are active');
 });
 
 test('API calls are queued until RedisQuotaManager is ready', async t => {
