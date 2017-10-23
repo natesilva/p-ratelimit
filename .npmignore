@@ -16,3 +16,5 @@ src/
 # transpiler settings
 tsconfig.json
 tslint.json
+
+test.ts
