@@ -14,6 +14,9 @@ export class QuotaManager {
   /** The number of currently-active invocations */
   get activeCount() { return this._activeCount; }
 
+  /** Max amount of time a queued request can wait before throwing a timeout error */
+  get maxDelay() { return this._quota.maxDelay || 0; }
+
   /**
    * Log that an invocation started.
    * @returns true if the invocation was allowed, false if not (you can try again later)
@@ -22,7 +25,7 @@ export class QuotaManager {
     if (this._activeCount >= this._quota.concurrency) { return false; }
 
     if (this._quota.interval !== undefined && this._quota.rate !== undefined) {
-      this.removeExpired();
+      this.removeExpiredHistory();
       if (this.history.length >= this._quota.rate) { return false; }
       this.history.push(Date.now());
     }
@@ -36,7 +39,7 @@ export class QuotaManager {
     this._activeCount--;
   }
 
-  protected removeExpired() {
+  protected removeExpiredHistory() {
     const expired = Date.now() - this._quota.interval;
     while (this.history.length && this.history.peekFront() < expired) {
       this.history.shift();

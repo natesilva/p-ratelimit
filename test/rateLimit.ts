@@ -7,6 +7,7 @@ import { RedisClient } from 'redis';
 import { pRateLimit } from '../src/rateLimit';
 import test from 'ava';
 import { uniqueId, sleep } from '../src/util';
+import { RateLimitTimeoutError } from '../src/rateLimitTimeoutError';
 
 // testing requires a real Redis server
 // fakeredis, redis-mock, redis-js, etc. have missing or broken client.duplicate()
@@ -210,4 +211,30 @@ test('can handle API calls that reject', async t => {
 
   t.is(api['rejectCount'], 2, '2 Promises were rejected');
   t.is(api['fulfillCount'], 3, '3 Promises were fulfilled');
+});
+
+test('API calls that wait too long are rejected', async t => {
+  const quota: Quota = { interval: 1000, rate: 1, concurrency: 1, maxDelay: 500 };
+  const rateLimit = pRateLimit(quota);
+
+  const api = mockApi(200);
+
+  const fn1 = rateLimit(() => api());
+  const fn2 = rateLimit(() => api());
+
+  await t.notThrows(fn1);
+  await t.throws(fn2, RateLimitTimeoutError);
+});
+
+test('Setting maxDelay to 0 disables maxDelay rejection', async t => {
+  const quota: Quota = { interval: 1000, rate: 1, concurrency: 1, maxDelay: 0 };
+  const rateLimit = pRateLimit(quota);
+
+  const api = mockApi(200);
+
+  const fn1 = rateLimit(() => api());
+  const fn2 = rateLimit(() => api());
+
+  await t.notThrows(fn1);
+  await t.notThrows(fn2);
 });

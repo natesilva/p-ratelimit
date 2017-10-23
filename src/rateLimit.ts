@@ -1,6 +1,7 @@
 import { Dequeue } from './dequeue';
 import { Quota } from './quota/quota';
 import { QuotaManager } from './quota/quotaManager';
+import { RateLimitTimeoutError } from './rateLimitTimeoutError';
 
 export function pRateLimit(quotaManager: QuotaManager | Quota)
   : <T>(fn: () => Promise<T>) => Promise<T>
@@ -27,19 +28,37 @@ export function pRateLimit(quotaManager: QuotaManager | Quota)
 
   return <T>(fn: () => Promise<T>) => {
     return new Promise<T>((resolve, reject) => {
-      const run = () =>
-        fn()
-          .then(val => {
-            resolve(val);
-          })
-          .catch(err => {
-            reject(err);
-          })
-          .then(() => {
-            quotaManager.end();
-            next();
-          })
-        ;
+      let timerId: NodeJS.Timer = null;
+      if (quotaManager.maxDelay) {
+        timerId = setTimeout(() => {
+          timerId = null;
+          reject(new RateLimitTimeoutError('queue maxDelay timemout exceeded'));
+        }, quotaManager.maxDelay);
+      }
+
+      const run = () => {
+          if (quotaManager.maxDelay) {
+            if (timerId) {
+              clearTimeout(timerId);
+            } else {
+              // timeout already fired
+              return;
+            }
+          }
+
+          fn()
+            .then(val => {
+              resolve(val);
+            })
+            .catch(err => {
+              reject(err);
+            })
+            .then(() => {
+              quotaManager.end();
+              next();
+            })
+          ;
+        }
       ;
 
       queue.push(run);

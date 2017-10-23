@@ -4,7 +4,9 @@
 
 This is an easy-to-use utility for calling rate-limited APIs. It will prevent you from exceeding rate limits by queueing requests that would go over your rate limit quota.
 
-It works with any API function that returns a Promise. If you are using an API that uses callbacks instead of Promises, you could [promisify](https://nodejs.org/api/util.html#util_util_promisify_original) it.
+Rate-limits can be applied across multiple servers if you use Redis.
+
+It works with any API function that returns a Promise. If you are using an API that uses callbacks, you could [promisify](https://nodejs.org/api/util.html#util_util_promisify_original) it.
 
 ## Install
 
@@ -20,8 +22,12 @@ $ npm i p-ratelimit
 * **Works across API families**
     * Utilities like [Lodash throttle](https://lodash.com/docs#throttle) create separate quotas for each API function.
     * **p-ratelimit** can enforce a single shared quota for all functions in an API family.
+* **Minimal implementation**
+    * Utilities like [limiter](https://github.com/jhurliman/node-rate-limiter) provide low-level tooling that requires you to manage tokens and provide your own queue.
+    * **p-ratelimit** requires minimal modification to your existing code.
 * **Distributed rate limits**
-    * If you use Redis, **p-ratelimit** supports efficient rate limiting across multiple hosts. The available quota is divided among your pool of servers. As servers are added or removed, the shared quota is recaclulated.
+    * If you use Redis, **p-ratelimit** supports efficient rate limiting across multiple hosts. The quota is divided among your pool of servers. As servers are added or removed, the shared quota is recaclulated.
+    *  A lightweight quota distribution system is used, with minimal network traffic required to coordinate the rate limits.
 * **Made for Promises and TypeScript friendly**
     * A rate-limited function returns the same Promise type as the original function.
 
@@ -48,6 +54,21 @@ async function main() {
 
 main();
 ```
+
+## Configuration
+
+The `Quota` configuration object passed to `pRateLimit` offers the following configuration options:
+
+* `interval`: the interval over which to apply the rate limit, in milliseconds
+* `rate`: how many API calls to allow over the interval period
+* `concurrency`: how many concurrent API calls to allow
+* `maxDelay`: the maximum amount of time to wait (in milliseconds) before rejecting an API request with `RateLimitTimeoutError` (default: `0`, no timeout)
+
+If you only care about concurrency, you can omit `interval` and `rate`.
+
+If you don’t care about concurrency, you can omit the `concurrency` value.
+
+If you make an API request that would exceed rate limits, it’s queued and delayed until it can run within the rate limits. Setting `maxDelay` will cause the API request to fail if it’s delayed too long.
 
 ## Distributed rate limits
 
