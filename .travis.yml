@@ -1,9 +1,0 @@
-language: node_js
-node_js:
-  - "node"
-  - "6.10.3"
-services:
-  - redis-server
-cache:
-  directories:
-    - "node_modules"
