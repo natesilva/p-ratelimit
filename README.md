@@ -2,7 +2,9 @@
 
 > Makes sure you don’t call rate-limited APIs too quickly.
 
-This works with any API function that returns a Promise. If your API uses callbacks instead of Promises, you could [promisify](https://nodejs.org/api/util.html#util_util_promisify_original) it.
+This is an easy-to-use utility for calling rate-limited APIs. It will prevent you from exceeding rate limits by queueing requests that would go over your rate limit quota.
+
+It works with any API function that returns a Promise. If you are using an API that uses callbacks instead of Promises, you could [promisify](https://nodejs.org/api/util.html#util_util_promisify_original) it.
 
 ## Install
 
