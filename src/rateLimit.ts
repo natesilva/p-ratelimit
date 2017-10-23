@@ -33,6 +33,7 @@ export function pRateLimit(quotaManager: QuotaManager | Quota)
         timerId = setTimeout(() => {
           timerId = null;
           reject(new RateLimitTimeoutError('queue maxDelay timemout exceeded'));
+          next();
         }, quotaManager.maxDelay);
       }
 
@@ -42,7 +43,6 @@ export function pRateLimit(quotaManager: QuotaManager | Quota)
               clearTimeout(timerId);
             } else {
               // timeout already fired
-              next();
               return;
             }
           }

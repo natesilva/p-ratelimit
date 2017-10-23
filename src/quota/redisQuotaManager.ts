@@ -25,7 +25,8 @@ export class RedisQuotaManager extends QuotaManager {
     private readonly client: RedisClient,
     private readonly heartbeatInterval = 30000
   ) {
-    super({ interval: 1000, rate: 0, concurrency: 0 });
+    // start with 0 concurrency so jobs don’t run until we’re ready
+    super(Object.assign({}, channelQuota, { concurrency: 0 }));
     this.channelName = `ratelimit-${channelName}`;
     this.pubSubClient = this.client.duplicate();
     this.register();

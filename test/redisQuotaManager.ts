@@ -111,3 +111,36 @@ test('Redis quota can be updated', async t => {
   let actualQuota3 = qm3.quota;
   t.deepEqual(actualQuota3, expectedQuota, 'client 3 quota should be updated');
 });
+
+test('RedisQuotaManager has a zero concurrency quota before it’s ready', async t => {
+  const client: RedisClient = redis.createClient(REDIS_PORT, REDIS_SERVER);
+  const quota: Quota = { rate: 3, interval: 500, concurrency: 2 };
+  const qm: RedisQuotaManager = new RedisQuotaManager(quota, uniqueId(), client);
+
+  t.is(qm.quota.concurrency, 0);
+  await waitForReady(qm);
+  t.is(qm.quota.concurrency, 2);
+});
+
+test('RedisQuotaManager with undefined concurrency has zero concurrency before it’s ready',
+  async t =>
+{
+  const client: RedisClient = redis.createClient(REDIS_PORT, REDIS_SERVER);
+  const quota: Quota = { rate: 3, interval: 500 };
+  const qm: RedisQuotaManager = new RedisQuotaManager(quota, uniqueId(), client);
+
+  t.is(qm.quota.concurrency, 0);
+  await waitForReady(qm);
+  t.is(qm.quota.concurrency, undefined);
+});
+
+
+test('maxDelay applies to RedisQuotaManager even before it’s ready', async t => {
+  const client: RedisClient = redis.createClient(REDIS_PORT, REDIS_SERVER);
+  const quota: Quota = { rate: 3, interval: 500, concurrency: 2, maxDelay: 250 };
+  const qm: RedisQuotaManager = new RedisQuotaManager(quota, uniqueId(), client);
+
+  t.is(qm.quota.maxDelay, 250);
+  await waitForReady(qm);
+  t.is(qm.quota.maxDelay, 250);
+});

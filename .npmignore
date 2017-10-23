@@ -17,4 +17,4 @@ src/
 tsconfig.json
 tslint.json
 
-test.ts
+**/test.*

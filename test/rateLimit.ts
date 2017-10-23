@@ -238,3 +238,18 @@ test('Setting maxDelay to 0 disables maxDelay rejection', async t => {
   await t.notThrows(fn1);
   await t.notThrows(fn2);
 });
+
+test('Continues running the queue after a maxDelay timeout', async t => {
+  const quota: Quota = { interval: 1000, rate: 1, concurrency: 1, maxDelay: 500 };
+  const rateLimit = pRateLimit(quota);
+
+  const api = mockApi(200);
+
+  const fn1 = rateLimit(() => api());
+  const fn2 = rateLimit(() => api());
+  const fn3 = rateLimit(() => api());
+
+  await t.notThrows(fn1);
+  await t.throws(fn2, RateLimitTimeoutError);
+  await t.throws(fn3, RateLimitTimeoutError);
+});
