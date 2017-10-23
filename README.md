@@ -27,7 +27,6 @@ $ npm i p-ratelimit
     * **p-ratelimit** requires minimal modification to your existing code.
 * **Distributed rate limits**
     * If you use Redis, **p-ratelimit** supports efficient rate limiting across multiple hosts. The quota is divided among your pool of servers. As servers are added or removed, the shared quota is recaclulated.
-    *  A lightweight quota distribution system is used, with minimal network traffic required to coordinate the rate limits.
 * **Made for Promises and TypeScript friendly**
     * A rate-limited function returns the same Promise type as the original function.
 
