@@ -10,7 +10,7 @@ export class RedisQuotaManager extends QuotaManager {
   private readonly pubSubClient: RedisClient;
   private readonly pingsReceived = new Map<string, number>();
   private readonly channelName: string;
-  private _ready = false;
+  private _ready: boolean;
   private heartbeatTimer: any = null;
 
   /**
@@ -26,7 +26,14 @@ export class RedisQuotaManager extends QuotaManager {
     private readonly heartbeatInterval = 30000
   ) {
     // start with 0 concurrency so jobs don’t run until we’re ready
-    super(Object.assign({}, channelQuota, { concurrency: 0 }));
+    super(
+      Object.assign(
+        {},
+        channelQuota,
+        { concurrency: channelQuota.fastStart ? channelQuota.concurrency : 0 }
+      )
+    );
+    this._ready = Boolean(channelQuota.fastStart);
     this.channelName = `ratelimit-${channelName}`;
     this.pubSubClient = this.client.duplicate();
     this.register();
@@ -44,7 +51,10 @@ export class RedisQuotaManager extends QuotaManager {
 
     this.ping();
 
-    await sleep(3000);
+    if (!this.channelQuota.fastStart) {
+      await sleep(3000);
+    }
+
     await this.updateQuota();
     this._ready = true;
 

@@ -134,7 +134,6 @@ test('RedisQuotaManager with undefined concurrency has zero concurrency before i
   t.is(qm.quota.concurrency, undefined);
 });
 
-
 test('maxDelay applies to RedisQuotaManager even before it’s ready', async t => {
   const client: RedisClient = redis.createClient(REDIS_PORT, REDIS_SERVER);
   const quota: Quota = { rate: 3, interval: 500, concurrency: 2, maxDelay: 250 };
@@ -143,4 +142,25 @@ test('maxDelay applies to RedisQuotaManager even before it’s ready', async t =
   t.is(qm.quota.maxDelay, 250);
   await waitForReady(qm);
   t.is(qm.quota.maxDelay, 250);
+});
+
+test('RedisQuotaManager with fastStart = true will process requests right away',
+  async t =>
+{
+  const channelName = uniqueId();
+
+  const client: RedisClient = redis.createClient(REDIS_PORT, REDIS_SERVER);
+  const quota: Quota = { rate: 10, interval: 500, concurrency: 4, fastStart: true };
+  const qm: RedisQuotaManager = new RedisQuotaManager(quota, channelName, client);
+
+  const client2: RedisClient = redis.createClient(REDIS_PORT, REDIS_SERVER);
+  const qm2: RedisQuotaManager = new RedisQuotaManager(quota, channelName, client2);
+
+  t.is(qm.quota.concurrency, quota.concurrency, 'starts with full concurrency quota');
+  t.is(qm.quota.rate, quota.rate, 'starts with full rate quota');
+  t.true(qm.ready, 'it’s ready immediately');
+  // wait for peer discovery
+  await sleep(3000);
+  t.is(qm.quota.concurrency, Math.floor(quota.concurrency / 2), 'now has half the concurrency quota');
+  t.is(qm.quota.rate, Math.floor(quota.rate / 2), 'now has half the rate quota');
 });

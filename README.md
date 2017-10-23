@@ -64,12 +64,15 @@ The `Quota` configuration object passed to `pRateLimit` offers the following con
 * `rate`: how many API calls to allow over the interval period
 * `concurrency`: how many concurrent API calls to allow
 * `maxDelay`: the maximum amount of time to wait (in milliseconds) before rejecting an API request with `RateLimitTimeoutError` (default: `0`, no timeout)
+* `fastStart` (Redis only): if true, immediately begin processing requests using the full quota, instead of waiting several seconds to discover other servers (default: `false`)
 
 If you only care about concurrency, you can omit `interval` and `rate`.
 
 If you don’t care about concurrency, you can omit the `concurrency` value.
 
 If you make an API request that would exceed rate limits, it’s queued and delayed until it can run within the rate limits. Setting `maxDelay` will cause the API request to fail if it’s delayed too long.
+
+See the [Distributed rate limits](https://github.com/natesilva/p-ratelimit#distributed-rate-limits) section for a discussion of the `fastStart` option.
 
 ## Distributed rate limits
 
@@ -98,6 +101,16 @@ const limit = pRateLimit(qm);
 Each server that registers with a given `channelName` will be allotted `1/(number of servers)` of the available quota. For example, if the pool consists of four servers, each will receive 1/4 the available quota.
 
 When a new server joins the pool, the quota is dynamically adjusted. If a server goes away, its quota is reallocated among the remaining servers within a few minutes.
+
+### The `fastStart` option
+
+The `fastStart` option only applies when using distributed rate limits (Redis).
+
+If `fastStart` is `true`, the rate-limiter will immediately process API requests, up to the full quota. As peer servers are discovered, the quota is automatically adjusted downward.
+
+If `fastStart` is `false` (the default), the rate-limiter starts with a quota of `0`. All API requests are queued and no requests are processed yet. After several seconds, when the rate-limiter has discovered its peers, its true quota is calculated and it begins processing the queued requests.
+
+A `fastStart` value of `true` will begin processing requests immediately, but there’s a small chance it could briefly cause the shared rate limit to be exceeded. A value of `false` makes sure the limit is not exceeded, but your app may run slowly at first, as the first API calls may be delayed for a few seconds.
 
 ## License
 
