@@ -71,11 +71,11 @@ If you don’t care about concurrency, you can omit the `concurrency` value.
 
 If you make an API request that would exceed rate limits, it’s queued and delayed until it can run within the rate limits. Setting `maxDelay` will cause the API request to fail if it’s delayed too long.
 
-See the [Using Redis](UsingRedis.md) section for a discussion of the `fastStart` option.
+See the [Using Redis](https://github.com/natesilva/p-ratelimit/blob/master/UsingRedis.md) section for a discussion of the `fastStart` option.
 
 ## Distributed rate limits
 
-See [Using Redis](UsingRedis.md) for a detailed discussion.
+See [Using Redis](https://github.com/natesilva/p-ratelimit/blob/master/UsingRedis.md) for a detailed discussion.
 
 You can use Redis to coordinate a rate limit among a pool of servers.
 
