@@ -1,6 +1,6 @@
 {
   "name": "p-ratelimit",
-  "version": "0.9.4",
+  "version": "0.9.5",
   "description": "Promise-based utility to make sure you don’t call rate-limited APIs too quickly.",
   "repository": "natesilva/p-ratelimit",
   "license": "MIT",
