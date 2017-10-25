@@ -6,7 +6,7 @@ This is an easy-to-use utility for calling rate-limited APIs. It will prevent yo
 
 Rate-limits can be applied across multiple servers if you use Redis.
 
-It works with any API function that returns a Promise. If you are using an API that uses callbacks, you could [promisify](https://nodejs.org/api/util.html#util_util_promisify_original) it.
+It works with any API function that returns a Promise.
 
 ## Install
 
@@ -71,9 +71,11 @@ If you don’t care about concurrency, you can omit the `concurrency` value.
 
 If you make an API request that would exceed rate limits, it’s queued and delayed until it can run within the rate limits. Setting `maxDelay` will cause the API request to fail if it’s delayed too long.
 
-See the [Distributed rate limits](https://github.com/natesilva/p-ratelimit#distributed-rate-limits) section for a discussion of the `fastStart` option.
+See the [Using Redis](using-redis.md) section for a discussion of the `fastStart` option.
 
 ## Distributed rate limits
+
+See [Using Redis](using-redis.md) for a detailed discussion.
 
 You can use Redis to coordinate a rate limit among a pool of servers.
 
@@ -100,16 +102,6 @@ const limit = pRateLimit(qm);
 Each server that registers with a given `channelName` will be allotted `1/(number of servers)` of the available quota. For example, if the pool consists of four servers, each will receive 1/4 the available quota.
 
 When a new server joins the pool, the quota is dynamically adjusted. If a server goes away, its quota is reallocated among the remaining servers within a few minutes.
-
-### The `fastStart` option
-
-The `fastStart` option only applies when using distributed rate limits (Redis).
-
-If `fastStart` is `true`, the rate-limiter will immediately process API requests, up to the full quota. As peer servers are discovered, the quota is automatically adjusted downward.
-
-If `fastStart` is `false` (the default), the rate-limiter starts with a quota of `0`. All API requests are queued and no requests are processed yet. After several seconds, when the rate-limiter has discovered its peers, its true quota is calculated and it begins processing the queued requests.
-
-A `fastStart` value of `true` will begin processing requests immediately, but there’s a small chance it could briefly cause the shared rate limit to be exceeded. A value of `false` makes sure the limit is not exceeded, but your app may run slowly at first, as the first API calls may be delayed for a few seconds.
 
 ## License
 
