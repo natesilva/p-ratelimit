@@ -10,19 +10,20 @@ export class RedisQuotaManager extends QuotaManager {
   private readonly pubSubClient: RedisClient;
   private readonly pingsReceived = new Map<string, number>();
   private readonly channelName: string;
+  private readonly client: RedisClient;
   private _ready: boolean;
   private heartbeatTimer: any = null;
 
   /**
    * @param channelQuota the overall quota to be split among all clients
    * @param channelName unique name for this quota - the Redis pub/sub channel name
-   * @param client a Redis client
+   * @param client a Redis client (or a pair of Redis clients if using a specialty Redis library)
    * @param heartbeatInterval how often to ping the Redis channel (milliseconds)
    */
   constructor(
     private readonly channelQuota: Quota,
     channelName: string,
-    private readonly client: RedisClient,
+    client: RedisClient | RedisClient[],
     private readonly heartbeatInterval = 30000
   ) {
     // start with 0 concurrency so jobs don’t run until we’re ready
@@ -35,7 +36,23 @@ export class RedisQuotaManager extends QuotaManager {
     );
     this._ready = Boolean(channelQuota.fastStart);
     this.channelName = `ratelimit-${channelName}`;
-    this.pubSubClient = this.client.duplicate();
+
+    const clients = Array.isArray(client) ? client : [client];
+
+    if (clients.length === 1) {
+      this.client = clients[0];
+      if (typeof this.client.duplicate !== 'function') {
+        const msg = '[p-ratelimit RedisQuotaManager] Your Redis client does not ' +
+          'support the client.duplicate() function. Please provide an array of two ' +
+          'clients instead.';
+        throw new Error(msg);
+      }
+      this.pubSubClient = this.client.duplicate();
+    } else {
+      this.client = clients[0];
+      this.pubSubClient = clients[1];
+    }
+
     this.register();
   }
 

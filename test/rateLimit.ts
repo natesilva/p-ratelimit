@@ -1,4 +1,4 @@
-import * as redis from 'redis';
+import * as redis from 'fakeredis';
 
 import { Quota, QuotaManager, RedisQuotaManager } from '../src';
 
@@ -157,9 +157,12 @@ test('combined rate limits and concurrency are enforced', async t => {
 });
 
 test('API calls are queued until RedisQuotaManager is ready', async t => {
-  const client: RedisClient = redis.createClient(REDIS_PORT, REDIS_SERVER);
+  const clients: RedisClient[] = [
+    redis.createClient(REDIS_PORT, REDIS_SERVER),
+    redis.createClient(REDIS_PORT, REDIS_SERVER)
+  ];
   const quota: Quota = { rate: 300, interval: 1000, concurrency: 100 };
-  const qm: RedisQuotaManager = new RedisQuotaManager(quota, uniqueId(), client);
+  const qm: RedisQuotaManager = new RedisQuotaManager(quota, uniqueId(), clients);
 
   const rateLimit = pRateLimit(qm);
 
