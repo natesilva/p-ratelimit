@@ -287,3 +287,17 @@ test.serial('Passing no quota prints a console warning', async t => {
     td.reset();
   }
 });
+
+test('Using an empty quota is a no-op', async t => {
+  const quota: Quota = {};
+  const rateLimit = pRateLimit(quota);
+
+  const api = mockApi(200);
+
+  const promises: Promise<void>[] = [];
+  for (let i = 0; i < 100; ++i) {
+    promises.push(api());
+  }
+
+  await t.notThrowsAsync(Promise.all(promises));
+});
