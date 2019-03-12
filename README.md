@@ -61,6 +61,8 @@ The `Quota` configuration object passed to `pRateLimit` offers the following con
 
 ### If you care about rate limiting
 
+Set both of these:
+
 * `interval`: the interval over which to apply the rate limit, in milliseconds
 * `rate`: how many API calls to allow over the interval period
 
@@ -70,7 +72,7 @@ The `Quota` configuration object passed to `pRateLimit` offers the following con
 
 ### If you care about both rate limiting and concurrency
 
-If you want both rate limiting and concurrency, you can use all three of the above settings (`interval`, `rate`, `concurrency`).
+If you want both rate limiting and concurrency, use all three of the above settings (`interval`, `rate`, `concurrency`).
 
 ### Other options
 
