@@ -13,6 +13,16 @@ export class QuotaManager {
       );
       this._quota = {};
     }
+
+    if (
+      ('interval' in this._quota && !('rate' in this._quota)) ||
+      ('rate' in this._quota && !('interval' in this._quota))
+    ) {
+      const msg =
+        `[p-ratelimit QuotaManager] Invalid Quota: for a rate-limit quota, both ` +
+        `interval and rate must be specified.`;
+      throw new Error(msg);
+    }
   }
 
   /** The current quota */
