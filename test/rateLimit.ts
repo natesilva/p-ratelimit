@@ -204,7 +204,7 @@ test('can handle API calls that reject', async t => {
     rateLimit(() => api())
   ];
 
-  await t.throws(Promise.all(promises));
+  await t.throwsAsync(Promise.all(promises));
 
   // wait for them all to complete (rejected or not)
   await Promise.all(promises.map(async p => {
@@ -225,8 +225,8 @@ test('API calls that wait too long are rejected', async t => {
   const fn1 = rateLimit(() => api());
   const fn2 = rateLimit(() => api());
 
-  await t.notThrows(fn1);
-  await t.throws(fn2, RateLimitTimeoutError);
+  await t.notThrowsAsync(fn1);
+  await t.throwsAsync(fn2, RateLimitTimeoutError);
 });
 
 test('Setting maxDelay to 0 disables maxDelay rejection', async t => {
@@ -238,8 +238,8 @@ test('Setting maxDelay to 0 disables maxDelay rejection', async t => {
   const fn1 = rateLimit(() => api());
   const fn2 = rateLimit(() => api());
 
-  await t.notThrows(fn1);
-  await t.notThrows(fn2);
+  await t.notThrowsAsync(fn1);
+  await t.notThrowsAsync(fn2);
 });
 
 test('Continues running the queue after a maxDelay timeout', async t => {
@@ -252,7 +252,7 @@ test('Continues running the queue after a maxDelay timeout', async t => {
   const fn2 = rateLimit(() => api());
   const fn3 = rateLimit(() => api());
 
-  await t.notThrows(fn1);
-  await t.throws(fn2, RateLimitTimeoutError);
-  await t.throws(fn3, RateLimitTimeoutError);
+  await t.notThrowsAsync(fn1);
+  await t.throwsAsync(fn2, RateLimitTimeoutError);
+  await t.throwsAsync(fn3, RateLimitTimeoutError);
 });
