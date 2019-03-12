@@ -1,1 +1,1 @@
-export class RateLimitTimeoutError extends Error {};
+export class RateLimitTimeoutError extends Error {}

@@ -4,15 +4,15 @@ import test from 'ava';
 test('dequeue basic functionality', t => {
   const d = new Dequeue<string>();
   t.is(d.length, 0);
-  d.push('foo');                  //  [ foo ]
-  d.push('bar');                  //  [ foo, bar ]
+  d.push('foo'); //  [ foo ]
+  d.push('bar'); //  [ foo, bar ]
   t.is(d.length, 2);
   t.is(d.peekFront(), 'foo');
   t.is(d.peekBack(), 'bar');
-  t.is(d.shift(), 'foo');         // [ bar ]
-  d.push('baz');                  // [ bar, baz ]
-  t.is(d.pop(), 'baz');           // [ bar ]
-  t.is(d.pop(), 'bar');           // [ ]
+  t.is(d.shift(), 'foo'); // [ bar ]
+  d.push('baz'); // [ bar, baz ]
+  t.is(d.pop(), 'baz'); // [ bar ]
+  t.is(d.pop(), 'bar'); // [ ]
   t.is(d.length, 0);
 });
 

@@ -10,7 +10,8 @@
   "scripts": {
     "test": "npm run prepare && ava --verbose ./build/test",
     "coverage": "npm run prepare && nyc --reporter lcov --reporter text ava ./build/test",
-    "prepare": "del-cli build && tsc"
+    "prepare": "del-cli build && tsc",
+    "prettier": "prettier --write \"{src,test}/**/*.?(ts|json)\""
   },
   "keywords": [
     "ratelimit",
@@ -31,6 +32,7 @@
     "del-cli": "^1.1.0",
     "fakeredis": "^2.0.0",
     "nyc": "^13.3.0",
+    "prettier": "^1.16.4",
     "testdouble": "^3.11.0",
     "ts-node": "^8.0.3",
     "tslint": "^5.13.1",

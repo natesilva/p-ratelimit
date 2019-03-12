@@ -143,9 +143,7 @@ test('RedisQuotaManager has a zero concurrency quota before it’s ready', async
   t.is(qm.quota.concurrency, 2);
 });
 
-test('RedisQuotaManager with undefined concurrency has zero concurrency before it’s ready',
-  async t =>
-{
+test('RedisQuotaManager with undefined concurrency has zero concurrency before it’s ready', async t => {
   const clients: RedisClient[] = [
     redis.createClient(REDIS_PORT, REDIS_SERVER),
     redis.createClient(REDIS_PORT, REDIS_SERVER)
@@ -163,7 +161,12 @@ test('maxDelay applies to RedisQuotaManager even before it’s ready', async t =
     redis.createClient(REDIS_PORT, REDIS_SERVER),
     redis.createClient(REDIS_PORT, REDIS_SERVER)
   ];
-  const quota: Quota = { rate: 3, interval: 500, concurrency: 2, maxDelay: 250 };
+  const quota: Quota = {
+    rate: 3,
+    interval: 500,
+    concurrency: 2,
+    maxDelay: 250
+  };
   const qm: RedisQuotaManager = new RedisQuotaManager(quota, uniqueId(), clients);
 
   t.is(qm.quota.maxDelay, 250);
@@ -171,16 +174,19 @@ test('maxDelay applies to RedisQuotaManager even before it’s ready', async t =
   t.is(qm.quota.maxDelay, 250);
 });
 
-test('RedisQuotaManager with fastStart = true will process requests right away',
-  async t =>
-{
+test('RedisQuotaManager with fastStart = true will process requests right away', async t => {
   const channelName = uniqueId();
 
   const clients: RedisClient[] = [
     redis.createClient(REDIS_PORT, REDIS_SERVER),
     redis.createClient(REDIS_PORT, REDIS_SERVER)
   ];
-  const quota: Quota = { rate: 10, interval: 500, concurrency: 4, fastStart: true };
+  const quota: Quota = {
+    rate: 10,
+    interval: 500,
+    concurrency: 4,
+    fastStart: true
+  };
   const qm: RedisQuotaManager = new RedisQuotaManager(quota, channelName, clients);
 
   const clients2: RedisClient[] = [
@@ -194,6 +200,10 @@ test('RedisQuotaManager with fastStart = true will process requests right away',
   t.true(qm.ready, 'it’s ready immediately');
   // wait for peer discovery
   await sleep(3000);
-  t.is(qm.quota.concurrency, Math.floor(quota.concurrency / 2), 'now has half the concurrency quota');
+  t.is(
+    qm.quota.concurrency,
+    Math.floor(quota.concurrency / 2),
+    'now has half the concurrency quota'
+  );
   t.is(qm.quota.rate, Math.floor(quota.rate / 2), 'now has half the rate quota');
 });

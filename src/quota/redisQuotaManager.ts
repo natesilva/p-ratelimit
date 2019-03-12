@@ -28,11 +28,9 @@ export class RedisQuotaManager extends QuotaManager {
   ) {
     // start with 0 concurrency so jobs don’t run until we’re ready
     super(
-      Object.assign(
-        {},
-        channelQuota,
-        { concurrency: channelQuota.fastStart ? channelQuota.concurrency : 0 }
-      )
+      Object.assign({}, channelQuota, {
+        concurrency: channelQuota.fastStart ? channelQuota.concurrency : 0
+      })
     );
     this._ready = Boolean(channelQuota.fastStart);
     this.channelName = `ratelimit-${channelName}`;
@@ -42,7 +40,8 @@ export class RedisQuotaManager extends QuotaManager {
     if (clients.length === 1) {
       this.client = clients[0];
       if (typeof this.client.duplicate !== 'function') {
-        const msg = '[p-ratelimit RedisQuotaManager] Your Redis client does not ' +
+        const msg =
+          '[p-ratelimit RedisQuotaManager] Your Redis client does not ' +
           'support the client.duplicate() function. Please provide an array of two ' +
           'clients instead.';
         throw new Error(msg);
@@ -57,14 +56,18 @@ export class RedisQuotaManager extends QuotaManager {
   }
 
   /** true once the Quota Manager has discovered its peers and calculated its quota */
-  get ready() { return this._ready; }
+  get ready() {
+    return this._ready;
+  }
 
   /** Join the client pool, coordinated by the shared channel on Redis */
   private async register() {
     this.pingsReceived.set(this.uniqueId, Date.now());
 
     this.pubSubClient.on('message', (channel, message) => this.message(channel, message));
-    await promisify(this.pubSubClient.subscribe.bind(this.pubSubClient))(this.channelName);
+    await promisify(this.pubSubClient.subscribe.bind(this.pubSubClient))(
+      this.channelName
+    );
 
     this.ping();
 

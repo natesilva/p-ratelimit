@@ -11,10 +11,16 @@ export function sleep(ms: number) {
 export function promisify(fn) {
   return function(...args) {
     return new Promise<any>((resolve, reject) => {
-      fn.apply(null, args.concat((err, ...results) => {
-        if (err) { reject(err); }
-        else { resolve.apply(null, results); }
-      }))
+      fn.apply(
+        null,
+        args.concat((err, ...results) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve.apply(null, results);
+          }
+        })
+      );
     });
-  }
+  };
 }

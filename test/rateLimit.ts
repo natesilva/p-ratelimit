@@ -64,9 +64,9 @@ test('concurrency is enforced', async t => {
   const startTime = Date.now();
 
   const promises = [
-    rateLimit(() => api()),   // 0-500 ms
-    rateLimit(() => api()),   // 0-500 ms
-    rateLimit(() => api())    // 500-1000 ms
+    rateLimit(() => api()), // 0-500 ms
+    rateLimit(() => api()), // 0-500 ms
+    rateLimit(() => api()) // 500-1000 ms
   ];
 
   while (true) {
@@ -93,11 +93,11 @@ test('rate limits are enforced', async t => {
   const startTime = Date.now();
 
   const promises = [
-    rateLimit(() => api()),   // 0-500 ms
-    rateLimit(() => api()),   // 0-500 ms
-    rateLimit(() => api()),   // 0-500 ms
-    rateLimit(() => api()),   // 500-1000 ms
-    rateLimit(() => api())    // 500-1000 ms
+    rateLimit(() => api()), // 0-500 ms
+    rateLimit(() => api()), // 0-500 ms
+    rateLimit(() => api()), // 0-500 ms
+    rateLimit(() => api()), // 500-1000 ms
+    rateLimit(() => api()) // 500-1000 ms
   ];
 
   while (true) {
@@ -106,10 +106,10 @@ test('rate limits are enforced', async t => {
       t.is(quotaManager.activeCount, 3, 'at t < 500, 3 jobs are active');
       t.is(api['fulfillCount'], 0, 'at t < 500, 0 jobs are done');
     } else if (elapsed > 600 && elapsed < 900) {
-      t.is(quotaManager.activeCount, 2, 'at 500 < t < 1000, 2 jobs are active')
+      t.is(quotaManager.activeCount, 2, 'at 500 < t < 1000, 2 jobs are active');
       t.is(api['fulfillCount'], 3, 'at 500 < t < 1000, 3 jobs are done');
     } else if (elapsed > 1200) {
-      t.is(quotaManager.activeCount, 0, 'at t > 1200, 0 jobs are active')
+      t.is(quotaManager.activeCount, 0, 'at t > 1200, 0 jobs are active');
       t.is(api['fulfillCount'], 5, 'at t > 1200, 5 jobs are done');
       break;
     }
@@ -127,11 +127,11 @@ test('combined rate limits and concurrency are enforced', async t => {
   const startTime = Date.now();
 
   const promises = [
-    rateLimit(() => api()),   // 0-500 ms
-    rateLimit(() => api()),   // 0-500 ms
-    rateLimit(() => api()),   // 500-1000 ms
-    rateLimit(() => api()),   // 1000-1500 ms
-    rateLimit(() => api())    // 1000-1500 ms
+    rateLimit(() => api()), // 0-500 ms
+    rateLimit(() => api()), // 0-500 ms
+    rateLimit(() => api()), // 500-1000 ms
+    rateLimit(() => api()), // 1000-1500 ms
+    rateLimit(() => api()) // 1000-1500 ms
   ];
 
   while (true) {
@@ -140,13 +140,13 @@ test('combined rate limits and concurrency are enforced', async t => {
       t.is(quotaManager.activeCount, 2, 'at t < 500, 2 jobs are active');
       t.is(api['fulfillCount'], 0, 'at t < 500, 0 jobs are done');
     } else if (elapsed > 600 && elapsed < 900) {
-      t.is(quotaManager.activeCount, 1, 'at 500 < t < 1000, 1 job is active')
+      t.is(quotaManager.activeCount, 1, 'at 500 < t < 1000, 1 job is active');
       t.is(api['fulfillCount'], 2, 'at 500 < t < 1000, 2 jobs are done');
     } else if (elapsed > 1100 && elapsed < 1400) {
-      t.is(quotaManager.activeCount, 2, 'at 1000 < t < 1500, 2 jobs are active')
+      t.is(quotaManager.activeCount, 2, 'at 1000 < t < 1500, 2 jobs are active');
       t.is(api['fulfillCount'], 3, 'at 1000 < t < 1500, 3 jobs are done');
     } else if (elapsed > 1700) {
-      t.is(quotaManager.activeCount, 0, 'at t > 1200, 0 jobs are active')
+      t.is(quotaManager.activeCount, 0, 'at t > 1200, 0 jobs are active');
       t.is(api['fulfillCount'], 5, 'at t > 1200, 5 jobs are done');
       break;
     }
@@ -205,17 +205,27 @@ test('can handle API calls that reject', async t => {
   await t.throwsAsync(Promise.all(promises));
 
   // wait for them all to complete (rejected or not)
-  await Promise.all(promises.map(async p => {
-    try { await p; }
-    catch { /* ignore */ }
-  }));
+  await Promise.all(
+    promises.map(async p => {
+      try {
+        await p;
+      } catch {
+        /* ignore */
+      }
+    })
+  );
 
   t.is(api['rejectCount'], 2, '2 Promises were rejected');
   t.is(api['fulfillCount'], 3, '3 Promises were fulfilled');
 });
 
 test('API calls that wait too long are rejected', async t => {
-  const quota: Quota = { interval: 1000, rate: 1, concurrency: 1, maxDelay: 500 };
+  const quota: Quota = {
+    interval: 1000,
+    rate: 1,
+    concurrency: 1,
+    maxDelay: 500
+  };
   const rateLimit = pRateLimit(quota);
 
   const api = mockApi(200);
@@ -241,7 +251,12 @@ test('Setting maxDelay to 0 disables maxDelay rejection', async t => {
 });
 
 test('Continues running the queue after a maxDelay timeout', async t => {
-  const quota: Quota = { interval: 1000, rate: 1, concurrency: 1, maxDelay: 500 };
+  const quota: Quota = {
+    interval: 1000,
+    rate: 1,
+    concurrency: 1,
+    maxDelay: 500
+  };
   const rateLimit = pRateLimit(quota);
 
   const api = mockApi(200);

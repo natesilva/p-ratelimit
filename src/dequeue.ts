@@ -9,7 +9,9 @@ export class Dequeue<T> {
   private head: Node<T> = undefined;
   private tail: Node<T> = undefined;
 
-  get length() { return this._length; }
+  get length() {
+    return this._length;
+  }
 
   clear() {
     this.head = this.tail = undefined;
@@ -33,7 +35,9 @@ export class Dequeue<T> {
   }
 
   pop(): T {
-    if (!this._length) { return undefined; }
+    if (!this._length) {
+      return undefined;
+    }
     const result = this.tail;
     this.tail = this.tail.prev;
     this._length--;
@@ -61,7 +65,9 @@ export class Dequeue<T> {
   }
 
   shift(): T {
-    if (!this._length) { return undefined; }
+    if (!this._length) {
+      return undefined;
+    }
     const result = this.head;
     this.head = this.head.next;
     this._length--;

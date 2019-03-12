@@ -3,9 +3,9 @@ import { Quota } from './quota/quota';
 import { QuotaManager } from './quota/quotaManager';
 import { RateLimitTimeoutError } from './rateLimitTimeoutError';
 
-export function pRateLimit(quotaManager: QuotaManager | Quota)
-  : <T>(fn: () => Promise<T>) => Promise<T>
-{
+export function pRateLimit(
+  quotaManager: QuotaManager | Quota
+): <T>(fn: () => Promise<T>) => Promise<T> {
   if (!(quotaManager instanceof QuotaManager)) {
     return pRateLimit(new QuotaManager(quotaManager));
   }
@@ -38,29 +38,27 @@ export function pRateLimit(quotaManager: QuotaManager | Quota)
       }
 
       const run = () => {
-          if (quotaManager.maxDelay) {
-            if (timerId) {
-              clearTimeout(timerId);
-            } else {
-              // timeout already fired
-              return;
-            }
+        if (quotaManager.maxDelay) {
+          if (timerId) {
+            clearTimeout(timerId);
+          } else {
+            // timeout already fired
+            return;
           }
-
-          fn()
-            .then(val => {
-              resolve(val);
-            })
-            .catch(err => {
-              reject(err);
-            })
-            .then(() => {
-              quotaManager.end();
-              next();
-            })
-          ;
         }
-      ;
+
+        fn()
+          .then(val => {
+            resolve(val);
+          })
+          .catch(err => {
+            reject(err);
+          })
+          .then(() => {
+            quotaManager.end();
+            next();
+          });
+      };
 
       queue.push(run);
       next();
