@@ -57,17 +57,25 @@ main();
 
 ## Configuration
 
-The `Quota` configuration object passed to `pRateLimit` offers the following configuration options:
+The `Quota` configuration object passed to `pRateLimit` offers the following configuration settings:
+
+### If you care about rate limiting
 
 * `interval`: the interval over which to apply the rate limit, in milliseconds
 * `rate`: how many API calls to allow over the interval period
+
+### If you care about limiting concurrency
+
 * `concurrency`: how many concurrent API calls to allow
+
+### If you care about both rate limiting and concurrency
+
+If you want both rate limiting and concurrency, you can use all three of the above settings (`interval`, `rate`, `concurrency`).
+
+### Other options
+
 * `maxDelay`: the maximum amount of time to wait (in milliseconds) before rejecting an API request with `RateLimitTimeoutError` (default: `0`, no timeout)
 * `fastStart` (Redis only): if true, immediately begin processing requests using the full quota, instead of waiting several seconds to discover other servers (default: `false`)
-
-If you only care about concurrency, you can omit `interval` and `rate`.
-
-If you don’t care about concurrency, you can omit the `concurrency` value.
 
 If you make an API request that would exceed rate limits, it’s queued and delayed until it can run within the rate limits. Setting `maxDelay` will cause the API request to fail if it’s delayed too long.
 
