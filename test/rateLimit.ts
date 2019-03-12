@@ -1,13 +1,11 @@
-import * as redis from 'fakeredis';
-
-import { Quota, QuotaManager, RedisQuotaManager } from '../src';
-
-import { Dequeue } from '../src/dequeue';
-import { RedisClient } from 'redis';
-import { pRateLimit } from '../src/rateLimit';
 import test from 'ava';
-import { uniqueId, sleep } from '../src/util';
+import * as redis from 'fakeredis';
+import { RedisClient } from 'redis';
+import * as td from 'testdouble';
+import { Quota, QuotaManager, RedisQuotaManager } from '../src';
+import { pRateLimit } from '../src/rateLimit';
 import { RateLimitTimeoutError } from '../src/rateLimitTimeoutError';
+import { sleep, uniqueId } from '../src/util';
 
 // testing requires a real Redis server
 // fakeredis, redis-mock, redis-js, etc. have missing or broken client.duplicate()
@@ -255,4 +253,37 @@ test('Continues running the queue after a maxDelay timeout', async t => {
   await t.notThrowsAsync(fn1);
   await t.throwsAsync(fn2, RateLimitTimeoutError);
   await t.throwsAsync(fn3, RateLimitTimeoutError);
+});
+
+test.serial('Passing no quota is a no-op', async t => {
+  const consoleWarn = td.replace(console, 'warn');
+  try {
+    // TypeScript won’t allow this but it’s possible in JavaScript
+    const rateLimit = (pRateLimit as any)();
+
+    const api = mockApi(200);
+
+    const promises: Promise<void>[] = [];
+    for (let i = 0; i < 100; ++i) {
+      promises.push(api());
+    }
+
+    await t.notThrowsAsync(Promise.all(promises));
+  } finally {
+    td.reset();
+  }
+});
+
+test.serial('Passing no quota prints a console warning', async t => {
+  const consoleWarn = td.replace(console, 'warn');
+  try {
+    // TypeScript won’t allow this but it’s possible in JavaScript
+    const rateLimit = (pRateLimit as any)();
+
+    t.notThrows(() =>
+      td.verify(consoleWarn(td.matchers.contains('created with no quota')))
+    );
+  } finally {
+    td.reset();
+  }
 });

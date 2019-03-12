@@ -6,7 +6,14 @@ export class QuotaManager {
   protected _activeCount = 0;
   protected history = new Dequeue()
 
-  constructor(protected _quota: Quota) {}
+  constructor(protected _quota: Quota) {
+    if (typeof _quota !== 'object') {
+      console.warn(
+        '[p-ratelimit QuotaManager] A QuotaManager was created with no quota.'
+      );
+      this._quota = {};
+    }
+  }
 
   /** The current quota */
   get quota() { return Object.assign({}, this._quota); }
