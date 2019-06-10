@@ -9,7 +9,7 @@
   "types": "build/src/index.d.ts",
   "scripts": {
     "test": "ava",
-    "coverage": "nyc --reporter lcov --reporter text ava",
+    "coverage": "nyc --extension .ts --reporter lcov --reporter text ava",
     "prepare": "del-cli build && tsc",
     "prettier": "prettier --write \"{src,test}/**/*.?(ts|json)\""
   },
