@@ -8,8 +8,8 @@
   "main": "build/src/index.js",
   "types": "build/src/index.d.ts",
   "scripts": {
-    "test": "npm run prepare && ava --verbose ./build/test",
-    "coverage": "npm run prepare && nyc --reporter lcov --reporter text ava ./build/test",
+    "test": "ava",
+    "coverage": "nyc --reporter lcov --reporter text ava",
     "prepare": "del-cli build && tsc",
     "prettier": "prettier --write \"{src,test}/**/*.?(ts|json)\""
   },
@@ -26,17 +26,17 @@
     "node": ">=6.10.3"
   },
   "devDependencies": {
-    "@types/node": "^11.11.1",
-    "@types/redis": "^2.8.10",
-    "ava": "^1.3.1",
-    "del-cli": "^1.1.0",
+    "@types/node": "^12.0.7",
+    "@types/redis": "^2.8.13",
+    "ava": "^2.1.0",
+    "del-cli": "^2.0.0",
     "fakeredis": "^2.0.0",
-    "nyc": "^13.3.0",
-    "prettier": "^1.16.4",
-    "testdouble": "^3.11.0",
-    "ts-node": "^8.0.3",
-    "tslint": "^5.13.1",
-    "typescript": "^3.3.3333"
+    "nyc": "^14.1.1",
+    "prettier": "^1.18.2",
+    "testdouble": "^3.12.0",
+    "ts-node": "^8.2.0",
+    "tslint": "^5.17.0",
+    "typescript": "^3.5.1"
   },
   "dependencies": {}
 }
