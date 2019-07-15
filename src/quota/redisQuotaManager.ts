@@ -3,14 +3,17 @@ import { promisify, sleep, uniqueId } from '../util';
 import { Quota } from './quota';
 import { QuotaManager } from './quotaManager';
 import { RedisClient } from 'redis';
+import { Redis } from 'ioredis'
+
+type RedisCompatibleClient = RedisClient | Redis;
 
 /** QuotaManager that coordinates rate limits across servers. */
 export class RedisQuotaManager extends QuotaManager {
   private readonly uniqueId = uniqueId();
-  private readonly pubSubClient: RedisClient;
+  private readonly pubSubClient: RedisCompatibleClient;
   private readonly pingsReceived = new Map<string, number>();
   private readonly channelName: string;
-  private readonly client: RedisClient;
+  private readonly client: RedisCompatibleClient;
   private _ready: boolean;
   private heartbeatTimer: any = null;
 
@@ -23,7 +26,7 @@ export class RedisQuotaManager extends QuotaManager {
   constructor(
     private readonly channelQuota: Quota,
     channelName: string,
-    client: RedisClient | RedisClient[],
+    client: RedisCompatibleClient | RedisCompatibleClient[],
     private readonly heartbeatInterval = 30000
   ) {
     // start with 0 concurrency so jobs don’t run until we’re ready
