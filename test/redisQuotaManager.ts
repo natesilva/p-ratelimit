@@ -7,7 +7,7 @@ import { RedisClient } from 'redis';
 import * as IORedis from 'ioredis';
 import test from 'ava';
 
-type RedisCompatibleClient = RedisClient | IORedis.Redis;
+type RedisCompatibleClient = RedisClient | IORedis.Redis | IORedis.Cluster;
 
 // testing requires a real Redis server
 // fakeredis, redis-mock, redis-js, etc. have missing or broken client.duplicate()
@@ -18,13 +18,26 @@ const REDIS_PORT = 6379;
 /**
  * Get a set of Redis clients for testing. Defaults to fakeredis to make testing possible
  * without having a live server. Set the REDIS_CLIENT const to 'ioredis' if you do have
- * a live server to test with.
+ * a live server to test with. Set to 'cluster' if you have a cluster to test with that
+ * is setup as described at:
+ * https://redis.io/topics/cluster-tutorial#creating-and-using-a-redis-cluster
  */
 function getRedisClients(): RedisCompatibleClient | RedisCompatibleClient[] {
   switch (REDIS_CLIENT) {
     case 'ioredis':
       return new IORedis(REDIS_PORT, REDIS_SERVER);
       break;
+
+    case 'cluster':
+      const config = [
+        { port: 7000, host: 'localhost' },
+        { port: 7001, host: 'localhost' },
+        { port: 7002, host: 'localhost' },
+        { port: 7003, host: 'localhost' },
+        { port: 7004, host: 'localhost' },
+        { port: 7005, host: 'localhost' }
+      ];
+      return [new IORedis.Cluster(config), new IORedis.Cluster(config)];
 
     case 'fakeredis':
     default:
@@ -46,6 +59,14 @@ async function waitForReady(rqm: RedisQuotaManager) {
   }
   await sleep(100);
 }
+
+test('passing in a single client that doesn’t support duplicate() will throw', t => {
+  t.throws(() => {
+    const fakeClient: any = {};
+    const quota: Quota = { rate: 3, interval: 500, concurrency: 2 };
+    const qm = new RedisQuotaManager(quota, uniqueId(), fakeClient);
+  }, /client does not support the client.duplicate\(\) function/);
+});
 
 test('Redis quota manager works', async t => {
   const clients = getRedisClients();
