@@ -4,12 +4,36 @@ import { Quota, RedisQuotaManager } from '../src';
 import { sleep, uniqueId } from '../src/util';
 
 import { RedisClient } from 'redis';
+import * as IORedis from 'ioredis';
 import test from 'ava';
+
+type RedisCompatibleClient = RedisClient | IORedis.Redis;
 
 // testing requires a real Redis server
 // fakeredis, redis-mock, redis-js, etc. have missing or broken client.duplicate()
+const REDIS_CLIENT: string = 'fakeredis';
 const REDIS_SERVER = 'localhost';
 const REDIS_PORT = 6379;
+
+/**
+ * Get a set of Redis clients for testing. Defaults to fakeredis to make testing possible
+ * without having a live server. Set the REDIS_CLIENT const to 'ioredis' if you do have
+ * a live server to test with.
+ */
+function getRedisClients(): RedisCompatibleClient | RedisCompatibleClient[] {
+  switch (REDIS_CLIENT) {
+    case 'ioredis':
+      return new IORedis(REDIS_PORT, REDIS_SERVER);
+      break;
+
+    case 'fakeredis':
+    default:
+      return [
+        redis.createClient(REDIS_PORT, REDIS_SERVER),
+        redis.createClient(REDIS_PORT, REDIS_SERVER)
+      ];
+  }
+}
 
 /** Wait until the RQM is online */
 async function waitForReady(rqm: RedisQuotaManager) {
@@ -24,10 +48,7 @@ async function waitForReady(rqm: RedisQuotaManager) {
 }
 
 test('Redis quota manager works', async t => {
-  const clients: RedisClient[] = [
-    redis.createClient(REDIS_PORT, REDIS_SERVER),
-    redis.createClient(REDIS_PORT, REDIS_SERVER)
-  ];
+  const clients = getRedisClients();
   const quota: Quota = { rate: 3, interval: 500, concurrency: 2 };
   const qm: RedisQuotaManager = new RedisQuotaManager(quota, uniqueId(), clients);
 
@@ -57,14 +78,8 @@ test('Redis quota manager works', async t => {
 });
 
 test('separate Redis quota managers coordinate', async t => {
-  const clients1: RedisClient[] = [
-    redis.createClient(REDIS_PORT, REDIS_SERVER),
-    redis.createClient(REDIS_PORT, REDIS_SERVER)
-  ];
-  const clients2: RedisClient[] = [
-    redis.createClient(REDIS_PORT, REDIS_SERVER),
-    redis.createClient(REDIS_PORT, REDIS_SERVER)
-  ];
+  const clients1 = getRedisClients();
+  const clients2 = getRedisClients();
   const quota: Quota = { rate: 4, interval: 500, concurrency: 2 };
   const channelName = uniqueId();
   const qm1: RedisQuotaManager = new RedisQuotaManager(quota, channelName, clients1);
@@ -86,14 +101,8 @@ test('separate Redis quota managers coordinate', async t => {
 });
 
 test('Redis quota can be updated', async t => {
-  const clients1: RedisClient[] = [
-    redis.createClient(REDIS_PORT, REDIS_SERVER),
-    redis.createClient(REDIS_PORT, REDIS_SERVER)
-  ];
-  const clients2: RedisClient[] = [
-    redis.createClient(REDIS_PORT, REDIS_SERVER),
-    redis.createClient(REDIS_PORT, REDIS_SERVER)
-  ];
+  const clients1 = getRedisClients();
+  const clients2 = getRedisClients();
 
   const quota: Quota = { rate: 4, interval: 500, concurrency: 2 };
   const channelName = uniqueId();
@@ -111,10 +120,7 @@ test('Redis quota can be updated', async t => {
   let actualQuota2 = qm2.quota;
   t.deepEqual(actualQuota2, expectedQuota, 'client 2 quota should be correct');
 
-  const clients3: RedisClient[] = [
-    redis.createClient(REDIS_PORT, REDIS_SERVER),
-    redis.createClient(REDIS_PORT, REDIS_SERVER)
-  ];
+  const clients3 = getRedisClients();
   const qm3: RedisQuotaManager = new RedisQuotaManager(quota, channelName, clients3);
   await waitForReady(qm3);
 
@@ -131,10 +137,7 @@ test('Redis quota can be updated', async t => {
 });
 
 test('RedisQuotaManager has a zero concurrency quota before it’s ready', async t => {
-  const clients: RedisClient[] = [
-    redis.createClient(REDIS_PORT, REDIS_SERVER),
-    redis.createClient(REDIS_PORT, REDIS_SERVER)
-  ];
+  const clients = getRedisClients();
   const quota: Quota = { rate: 3, interval: 500, concurrency: 2 };
   const qm: RedisQuotaManager = new RedisQuotaManager(quota, uniqueId(), clients);
 
@@ -144,10 +147,7 @@ test('RedisQuotaManager has a zero concurrency quota before it’s ready', async
 });
 
 test('RedisQuotaManager with undefined concurrency has zero concurrency before it’s ready', async t => {
-  const clients: RedisClient[] = [
-    redis.createClient(REDIS_PORT, REDIS_SERVER),
-    redis.createClient(REDIS_PORT, REDIS_SERVER)
-  ];
+  const clients = getRedisClients();
   const quota: Quota = { rate: 3, interval: 500 };
   const qm: RedisQuotaManager = new RedisQuotaManager(quota, uniqueId(), clients);
 
@@ -157,10 +157,7 @@ test('RedisQuotaManager with undefined concurrency has zero concurrency before i
 });
 
 test('maxDelay applies to RedisQuotaManager even before it’s ready', async t => {
-  const clients: RedisClient[] = [
-    redis.createClient(REDIS_PORT, REDIS_SERVER),
-    redis.createClient(REDIS_PORT, REDIS_SERVER)
-  ];
+  const clients = getRedisClients();
   const quota: Quota = {
     rate: 3,
     interval: 500,
@@ -177,10 +174,7 @@ test('maxDelay applies to RedisQuotaManager even before it’s ready', async t =
 test('RedisQuotaManager with fastStart = true will process requests right away', async t => {
   const channelName = uniqueId();
 
-  const clients: RedisClient[] = [
-    redis.createClient(REDIS_PORT, REDIS_SERVER),
-    redis.createClient(REDIS_PORT, REDIS_SERVER)
-  ];
+  const clients = getRedisClients();
   const quota: Quota = {
     rate: 10,
     interval: 500,
@@ -189,10 +183,7 @@ test('RedisQuotaManager with fastStart = true will process requests right away',
   };
   const qm: RedisQuotaManager = new RedisQuotaManager(quota, channelName, clients);
 
-  const clients2: RedisClient[] = [
-    redis.createClient(REDIS_PORT, REDIS_SERVER),
-    redis.createClient(REDIS_PORT, REDIS_SERVER)
-  ];
+  const clients2 = getRedisClients();
   const qm2: RedisQuotaManager = new RedisQuotaManager(quota, channelName, clients2);
 
   t.is(qm.quota.concurrency, quota.concurrency, 'starts with full concurrency quota');
