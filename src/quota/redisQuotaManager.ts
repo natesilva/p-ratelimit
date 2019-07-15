@@ -3,9 +3,9 @@ import { promisify, sleep, uniqueId } from '../util';
 import { Quota } from './quota';
 import { QuotaManager } from './quotaManager';
 import { RedisClient } from 'redis';
-import { Redis } from 'ioredis'
+import * as IORedis from 'ioredis';
 
-type RedisCompatibleClient = RedisClient | Redis;
+type RedisCompatibleClient = RedisClient | IORedis.Redis | IORedis.Cluster;
 
 /** QuotaManager that coordinates rate limits across servers. */
 export class RedisQuotaManager extends QuotaManager {
@@ -42,14 +42,14 @@ export class RedisQuotaManager extends QuotaManager {
 
     if (clients.length === 1) {
       this.client = clients[0];
-      if (typeof this.client.duplicate !== 'function') {
+      if (typeof this.client['duplicate'] !== 'function') {
         const msg =
           '[p-ratelimit RedisQuotaManager] Your Redis client does not ' +
           'support the client.duplicate() function. Please provide an array of two ' +
           'clients instead.';
         throw new Error(msg);
       }
-      this.pubSubClient = this.client.duplicate();
+      this.pubSubClient = this.client['duplicate']();
     } else {
       this.client = clients[0];
       this.pubSubClient = clients[1];
@@ -68,7 +68,7 @@ export class RedisQuotaManager extends QuotaManager {
     this.pingsReceived.set(this.uniqueId, Date.now());
 
     this.pubSubClient.on('message', (channel, message) => this.message(channel, message));
-    await promisify(this.pubSubClient.subscribe.bind(this.pubSubClient))(
+    await promisify(this.pubSubClient['subscribe'].bind(this.pubSubClient))(
       this.channelName
     );
 
@@ -86,7 +86,7 @@ export class RedisQuotaManager extends QuotaManager {
 
   /** Send a ping to the shared Redis channel */
   private ping() {
-    this.client.publish(this.channelName, JSON.stringify(this.uniqueId));
+    this.client['publish'](this.channelName, JSON.stringify(this.uniqueId));
   }
 
   /** Receive client pings */
