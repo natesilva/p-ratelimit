@@ -5,7 +5,9 @@
 			"folder_exclude_patterns":
 			[
 				"node_modules",
-				"build"
+				"build",
+        ".nyc_output",
+        "coverage"
 			],
 			"path": "."
 		}
