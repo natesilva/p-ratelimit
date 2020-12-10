@@ -23,7 +23,7 @@
     "tokenbucket"
   ],
   "engines": {
-    "node": ">=6.10.3"
+    "node": ">=10.23.0"
   },
   "devDependencies": {
     "@types/ioredis": "^4.0.13",
