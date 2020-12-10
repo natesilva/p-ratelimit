@@ -22,6 +22,6 @@ test('invocations are logged', async t => {
 });
 
 test('throws if an incomplete rate-limit quota is used', t => {
-  t.throws(() => new QuotaManager({ interval: 100 }), /Invalid Quota/);
-  t.throws(() => new QuotaManager({ rate: 42 }), /Invalid Quota/);
+  t.throws(() => new QuotaManager({ interval: 100 }), { message: /Invalid Quota/ });
+  t.throws(() => new QuotaManager({ rate: 42 }), { message: /Invalid Quota/ });
 });

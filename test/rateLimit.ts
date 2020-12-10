@@ -234,7 +234,7 @@ test('API calls that wait too long are rejected', async t => {
   const fn2 = rateLimit(() => api());
 
   await t.notThrowsAsync(fn1);
-  await t.throwsAsync(fn2, RateLimitTimeoutError);
+  await t.throwsAsync(fn2, { instanceOf: RateLimitTimeoutError });
 });
 
 test('Setting maxDelay to 0 disables maxDelay rejection', async t => {
@@ -266,8 +266,8 @@ test('Continues running the queue after a maxDelay timeout', async t => {
   const fn3 = rateLimit(() => api());
 
   await t.notThrowsAsync(fn1);
-  await t.throwsAsync(fn2, RateLimitTimeoutError);
-  await t.throwsAsync(fn3, RateLimitTimeoutError);
+  await t.throwsAsync(fn2, { instanceOf: RateLimitTimeoutError });
+  await t.throwsAsync(fn3, { instanceOf: RateLimitTimeoutError });
 });
 
 test.serial('Passing no quota is a no-op', async t => {

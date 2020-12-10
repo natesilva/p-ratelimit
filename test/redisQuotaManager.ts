@@ -61,11 +61,14 @@ async function waitForReady(rqm: RedisQuotaManager) {
 }
 
 test('passing in a single client that doesn’t support duplicate() will throw', t => {
-  t.throws(() => {
-    const fakeClient: any = {};
-    const quota: Quota = { rate: 3, interval: 500, concurrency: 2 };
-    const qm = new RedisQuotaManager(quota, uniqueId(), fakeClient);
-  }, /client does not support the client.duplicate\(\) function/);
+  t.throws(
+    () => {
+      const fakeClient: any = {};
+      const quota: Quota = { rate: 3, interval: 500, concurrency: 2 };
+      const qm = new RedisQuotaManager(quota, uniqueId(), fakeClient);
+    },
+    { message: /client does not support the client.duplicate\(\) function/ }
+  );
 });
 
 test('Redis quota manager works', async t => {
