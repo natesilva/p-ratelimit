@@ -26,20 +26,24 @@
     "node": ">=10.23.0"
   },
   "devDependencies": {
-    "@types/ioredis": "^4.0.13",
-    "@types/node": "^12.6.3",
-    "@types/redis": "^2.8.13",
+    "@types/ioredis": "^4.17.8",
+    "@types/node": "^10.17.48",
+    "@types/redis": "^2.8.28",
     "ava": "^3.14.0",
-    "del-cli": "^2.0.0",
+    "del-cli": "^3.0.1",
     "fakeredis": "^2.0.0",
-    "ioredis": "^4.11.2",
-    "np": "^5.0.3",
-    "nyc": "^14.1.1",
-    "prettier": "^1.18.2",
-    "testdouble": "^3.12.1",
-    "ts-node": "^8.3.0",
-    "tslint": "^5.18.0",
-    "typescript": "^3.5.1"
+    "ioredis": "^4.19.2",
+    "np": "^7.0.0",
+    "nyc": "^15.1.0",
+    "prettier": "^2.2.1",
+    "testdouble": "^3.16.1",
+    "ts-node": "^9.1.1",
+    "tslint": "^6.1.3",
+    "typescript": "^4.1.2"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "volta": {
+    "node": "10.23.0",
+    "npm": "6.14.9"
+  }
 }
