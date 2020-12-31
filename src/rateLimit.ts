@@ -32,7 +32,7 @@ export function pRateLimit(
       if (quotaManager.maxDelay) {
         timerId = setTimeout(() => {
           timerId = null;
-          reject(new RateLimitTimeoutError('queue maxDelay timemout exceeded'));
+          reject(new RateLimitTimeoutError('queue maxDelay timeout exceeded'));
           next();
         }, quotaManager.maxDelay);
       }
