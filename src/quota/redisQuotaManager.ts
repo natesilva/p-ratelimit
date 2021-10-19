@@ -2,10 +2,8 @@ import { promisify, sleep, uniqueId } from '../util';
 
 import { Quota } from './quota';
 import { QuotaManager } from './quotaManager';
-import { RedisClient } from 'redis';
-import * as IORedis from 'ioredis';
 
-type RedisCompatibleClient = RedisClient | IORedis.Redis | IORedis.Cluster;
+type RedisCompatibleClient = import('redis').RedisClient | import('ioredis').Redis | import('ioredis').Cluster;
 
 /** QuotaManager that coordinates rate limits across servers. */
 export class RedisQuotaManager extends QuotaManager {
