@@ -1,6 +1,6 @@
 import test from 'ava';
 import * as redis from 'fakeredis';
-import { RedisClient } from 'redis';
+import { RedisClientType, RedisDefaultModules, RedisFunctions, RedisScripts } from 'redis';
 import * as td from 'testdouble';
 import { Quota, QuotaManager, RedisQuotaManager } from '../src';
 import { pRateLimit } from '../src/rateLimit';
@@ -155,7 +155,7 @@ test('combined rate limits and concurrency are enforced', async t => {
 });
 
 test('API calls are queued until RedisQuotaManager is ready', async t => {
-  const clients: RedisClient[] = [
+  const clients: RedisClientType<RedisDefaultModules, RedisFunctions, RedisScripts>[] = [
     redis.createClient(REDIS_PORT, REDIS_SERVER),
     redis.createClient(REDIS_PORT, REDIS_SERVER)
   ];

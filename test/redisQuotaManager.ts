@@ -3,11 +3,11 @@ import * as redis from 'fakeredis';
 import { Quota, RedisQuotaManager } from '../src';
 import { sleep, uniqueId } from '../src/util';
 
-import { RedisClient } from 'redis';
+import { RedisClientType, RedisDefaultModules, RedisFunctions, RedisScripts } from 'redis';
 import * as IORedis from 'ioredis';
 import test from 'ava';
 
-type RedisCompatibleClient = RedisClient | IORedis.Redis | IORedis.Cluster;
+type RedisCompatibleClient = RedisClientType<RedisDefaultModules, RedisFunctions, RedisScripts> | IORedis.Redis | IORedis.Cluster;
 
 // testing requires a real Redis server
 // fakeredis, redis-mock, redis-js, etc. have missing or broken client.duplicate()
