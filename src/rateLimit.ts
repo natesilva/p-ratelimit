@@ -43,6 +43,8 @@ export function pRateLimit(
             clearTimeout(timerId);
           } else {
             // timeout already fired
+            // FIX: release concurrency slot if we timed out while in the queue
+            quotaManager.end();
             return;
           }
         }
