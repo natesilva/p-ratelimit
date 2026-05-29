@@ -8,10 +8,8 @@ import { RateLimitTimeoutError } from "../src/rateLimitTimeoutError.ts";
 import { uniqueId } from "../src/util.ts";
 import { MockRedisBroker, MockRedisClient } from "./helpers/mock-redis-broker.ts";
 
-// test as unknown as RedisCompatibleClienting requires a real Redis server
-// fakeredis, redis-mock, redis-js, etc.  as unknown as RedisCompatibleClienthave missing or broken client.duplicate()
-const REDIS_SERVER = "localhost";
-const REDIS_PORT = 6379;
+// A mock Redis "server" to use for testing
+const mockRedis = new MockRedisBroker();
 
 /** Wait until the RQM is online */
 async function waitForReady(rqm: RedisQuotaManager) {
@@ -161,10 +159,9 @@ suite("rateLimit", { concurrency: true }, () => {
   });
 
   test("API calls are queued until RedisQuotaManager is ready", async (_t) => {
-    const broker = new MockRedisBroker();
     const clients = [
-      new MockRedisClient(broker) as unknown as RedisCompatibleClient,
-      new MockRedisClient(broker) as unknown as RedisCompatibleClient,
+      new MockRedisClient(mockRedis) as unknown as RedisCompatibleClient,
+      new MockRedisClient(mockRedis) as unknown as RedisCompatibleClient,
     ];
 
     const quota: Quota = { rate: 300, interval: 1000, concurrency: 100 };

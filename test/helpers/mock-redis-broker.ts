@@ -29,6 +29,15 @@ export class MockRedisBroker {
   }
 
   /**
+   * Remove a client from the given channel.
+   * @param channel - The pub/sub channel to unsubscribe from.
+   * @param client - The mock client to remove.
+   */
+  unsubscribe(channel: string, client: MockRedisClient) {
+    this.subscribers.get(channel)?.delete(client);
+  }
+
+  /**
    * Broadcast a message to every client subscribed to the given channel.
    * @param channel - The pub/sub channel to publish on.
    * @param message - The message payload to deliver.
@@ -72,6 +81,20 @@ export class MockRedisClient extends EventEmitter {
     setImmediate(() => {
       this.broker.subscribe(channel, this);
       cb(null, 1);
+    });
+  }
+
+  /**
+   * Unsubscribe from a channel and notify the caller when complete.
+   *
+   * Yields the event loop before completing to mimic real async I/O.
+   * @param channel - The channel to unsubscribe from.
+   * @param cb - Called with `(null, 0)` once the unsubscription is complete.
+   */
+  unsubscribe(channel: string, cb: (err: null, count: number) => void): void {
+    setImmediate(() => {
+      this.broker.unsubscribe(channel, this);
+      cb(null, 0);
     });
   }
 

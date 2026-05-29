@@ -12,6 +12,9 @@ const REDIS_CLIENT: string = "fakeredis";
 const REDIS_SERVER = "localhost";
 const REDIS_PORT = 6379;
 
+// A mock Redis "server" to use for testing
+const mockRedis = new MockRedisBroker();
+
 /**
  * Get a set of Redis clients for testing. Defaults to fakeredis to make testing possible
  * without having a live server. Set the REDIS_CLIENT const to 'ioredis' if you do have
@@ -36,13 +39,11 @@ function getRedisClients(): RedisCompatibleClient | RedisCompatibleClient[] {
       return [new IORedis.Cluster(config), new IORedis.Cluster(config)];
     }
 
-    default: {
-      const broker = new MockRedisBroker();
+    default:
       return [
-        new MockRedisClient(broker) as unknown as RedisCompatibleClient,
-        new MockRedisClient(broker) as unknown as RedisCompatibleClient,
+        new MockRedisClient(mockRedis) as unknown as RedisCompatibleClient,
+        new MockRedisClient(mockRedis) as unknown as RedisCompatibleClient,
       ];
-    }
   }
 }
 
@@ -235,6 +236,37 @@ suite("redisQuotaManager", { concurrency: true }, () => {
       qm.quota.rate,
       Math.floor(quota.rate / 2),
       "now has half the rate quota",
+    );
+  });
+
+  test("destroy stops heartbeats and unsubscribes from channel", async (_t) => {
+    const channelName = uniqueId();
+    const quota: Quota = { rate: 4, interval: 500, concurrency: 2 };
+
+    const clients1 = getRedisClients();
+    const qm1 = new RedisQuotaManager(quota, channelName, clients1, 100);
+    await waitForReady(qm1);
+
+    const clients2 = getRedisClients();
+    const qm2 = new RedisQuotaManager(quota, channelName, clients2, 100);
+    await waitForReady(qm2);
+
+    // Both should have half the quota
+    assert.equal(qm1.quota.rate, 2, "qm1 starts with half rate");
+    assert.equal(qm2.quota.rate, 2, "qm2 starts with half rate");
+
+    // Destroy qm1
+    await qm1.destroy();
+
+    // Wait long enough for qm2 to consider qm1 expired (heartbeatInterval * 3 + buffer)
+    await sleep(500);
+
+    // qm2 should now reclaim the full quota since qm1 is gone
+    assert.equal(qm2.quota.rate, 4, "qm2 reclaims full rate after qm1 destroyed");
+    assert.equal(
+      qm2.quota.concurrency,
+      2,
+      "qm2 reclaims full concurrency after qm1 destroyed",
     );
   });
 });

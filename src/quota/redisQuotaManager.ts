@@ -18,6 +18,7 @@ export class RedisQuotaManager extends QuotaManager {
   private readonly channelName: string;
   private readonly client: RedisCompatibleClient;
   private _ready: boolean;
+  private _heartbeatTimer?: ReturnType<typeof setInterval>;
 
   /**
    * @param channelQuota the overall quota to be split among all clients
@@ -71,7 +72,7 @@ export class RedisQuotaManager extends QuotaManager {
   private async register() {
     this.pingsReceived.set(this.uniqueId, Date.now());
 
-    this.pubSubClient.on("message", (channel, message) => this.message(channel, message));
+    this.pubSubClient.on("message", this._messageListener);
     await promisify(this.pubSubClient.subscribe.bind(this.pubSubClient))(
       this.channelName,
     );
@@ -85,8 +86,29 @@ export class RedisQuotaManager extends QuotaManager {
     this.updateQuota();
     this._ready = true;
 
-    setInterval(() => this.heartbeat(), this.heartbeatInterval);
+    this._heartbeatTimer = setInterval(() => this.heartbeat(), this.heartbeatInterval);
+    this._heartbeatTimer.unref();
   }
+
+  /** Stop the heartbeat timer and unsubscribe from the Redis channel. */
+  async destroy() {
+    if (this._heartbeatTimer) {
+      clearInterval(this._heartbeatTimer);
+      this._heartbeatTimer = undefined;
+    }
+    this.pubSubClient.removeListener("message", this._messageListener);
+    const unsubscribe = promisify(
+      this.pubSubClient.unsubscribe.bind(this.pubSubClient) as (
+        channel: string,
+        cb: (err: Error | null, count?: number) => void,
+      ) => void,
+    );
+    await unsubscribe(this.channelName);
+  }
+
+  private _messageListener = (channel: string, message: string) => {
+    this.message(channel, message);
+  };
 
   /** Send a ping to the shared Redis channel */
   private ping() {

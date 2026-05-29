@@ -9,8 +9,8 @@
   "types": "build/src/index.d.ts",
   "type": "module",
   "scripts": {
-    "test": "node --test --test-force-exit",
-    "coverage": "node --test --test-force-exit --experimental-test-coverage"
+    "test": "node --test",
+    "test:coverage": "node --test --experimental-test-coverage"
   },
   "keywords": [
     "ratelimit",
@@ -32,7 +32,6 @@
     "@types/node": "^22.19.19",
     "@types/redis": "^2.8.28",
     "del-cli": "^7.0.0",
-    "fakeredis": "^2.0.0",
     "ioredis": "^4.19.2",
     "typescript": "^6.0.3"
   }
