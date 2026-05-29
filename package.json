@@ -1,14 +1,14 @@
 {
   "name": "p-ratelimit",
-  "version": "1.0.1",
+  "version": "2.0.0-beta.1",
   "description": "Promise-based utility to make sure you don’t call rate-limited APIs too quickly.",
   "repository": "natesilva/p-ratelimit",
   "license": "MIT",
   "author": "Nate Silva <nate@natesilva.com>",
-  "main": "build/src/index.js",
-  "types": "build/src/index.d.ts",
   "type": "module",
   "scripts": {
+    "clean": "del-cli dist",
+    "build": "tsdown",
     "test": "node --test",
     "test:coverage": "node --test --experimental-test-coverage"
   },
@@ -24,6 +24,19 @@
   "engines": {
     "node": ">=22"
   },
+  "exports": {
+    "import": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.mjs"
+    },
+    "require": {
+      "types": "./dist/index.d.cts",
+      "default": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "devDependencies": {
     "@biomejs/biome": "^2.4.16",
     "@tsconfig/node-ts": "^23.6.4",
@@ -33,6 +46,7 @@
     "@types/redis": "^2.8.28",
     "del-cli": "^7.0.0",
     "ioredis": "^4.19.2",
+    "tsdown": "^0.22.0",
     "typescript": "^6.0.3"
   }
 }

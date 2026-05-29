@@ -1,6 +1,6 @@
 import { scheduler } from "node:timers/promises";
 import { promisify } from "node:util";
-import type * as IORedis from "ioredis";
+import type IORedis from "ioredis";
 import type { RedisClient } from "redis";
 import { uniqueId } from "../util.ts";
 import type { Quota } from "./quota.ts";
