@@ -9,8 +9,8 @@
   "types": "build/src/index.d.ts",
   "type": "module",
   "scripts": {
-    "test": "ava",
-    "coverage": "nyc --extension .ts --reporter lcov --reporter text ava"
+    "test": "node --test --test-force-exit",
+    "coverage": "node --test --test-force-exit --experimental-test-coverage"
   },
   "keywords": [
     "ratelimit",
@@ -31,14 +31,9 @@
     "@types/ioredis": "^4.17.8",
     "@types/node": "^22.19.19",
     "@types/redis": "^2.8.28",
-    "ava": "^3.14.0",
-    "del-cli": "^3.0.1",
+    "del-cli": "^7.0.0",
     "fakeredis": "^2.0.0",
     "ioredis": "^4.19.2",
-    "np": "^7.0.0",
-    "nyc": "^15.1.0",
-    "testdouble": "^3.16.1",
-    "ts-node": "^9.1.1",
     "typescript": "^6.0.3"
   }
 }

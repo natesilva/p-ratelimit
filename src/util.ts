@@ -1,9 +1,11 @@
 import * as crypto from "node:crypto";
+import { scheduler } from "node:timers/promises";
 
 export function uniqueId() {
-  return crypto.randomBytes(16).toString("hex");
+  return crypto.randomBytes(4).toString("hex");
+  // return crypto.randomBytes(16).toString("hex");
 }
 
-export function sleep(ms: number) {
-  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+export async function sleep(ms: number) {
+  return await scheduler.wait(ms);
 }

@@ -1,11 +1,12 @@
+import { scheduler } from "node:timers/promises";
 import { promisify } from "node:util";
 import type * as IORedis from "ioredis";
 import type { RedisClient } from "redis";
-import { sleep, uniqueId } from "../util.ts";
+import { uniqueId } from "../util.ts";
 import type { Quota } from "./quota.ts";
 import { QuotaManager } from "./quotaManager.ts";
 
-type RedisCompatibleClient = RedisClient | IORedis.Redis | IORedis.Cluster;
+export type RedisCompatibleClient = RedisClient | IORedis.Redis | IORedis.Cluster;
 
 /** QuotaManager that coordinates rate limits across servers. */
 export class RedisQuotaManager extends QuotaManager {
@@ -78,7 +79,7 @@ export class RedisQuotaManager extends QuotaManager {
     this.ping();
 
     if (!this.channelQuota.fastStart) {
-      await sleep(3000);
+      await scheduler.wait(3000);
     }
 
     this.updateQuota();
@@ -134,7 +135,9 @@ export class RedisQuotaManager extends QuotaManager {
     }
 
     const newQuota = Object.assign({}, this.channelQuota);
-    newQuota.rate = Math.floor(newQuota.rate / this.pingsReceived.size);
+    if (newQuota.rate !== undefined) {
+      newQuota.rate = Math.floor(newQuota.rate / this.pingsReceived.size);
+    }
     if (newQuota.concurrency) {
       newQuota.concurrency = Math.floor(newQuota.concurrency / this.pingsReceived.size);
     }

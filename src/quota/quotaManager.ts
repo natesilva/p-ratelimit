@@ -48,7 +48,10 @@ export class QuotaManager {
    * @returns true if the invocation was allowed, false if not (you can try again later)
    */
   start() {
-    if (this._quota.concurrency && this._activeCount >= this._quota.concurrency) {
+    if (
+      this._quota.concurrency !== undefined &&
+      this._activeCount >= this._quota.concurrency
+    ) {
       return false;
     }
 

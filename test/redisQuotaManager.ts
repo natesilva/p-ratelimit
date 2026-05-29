@@ -1,11 +1,10 @@
-import test from "ava";
-import * as redis from "fakeredis";
+import { strict as assert } from "node:assert";
+import { suite, test } from "node:test";
 import IORedis from "ioredis";
-import type { RedisClient } from "redis";
 import { type Quota, RedisQuotaManager } from "../src/index.ts";
+import type { RedisCompatibleClient } from "../src/quota/redisQuotaManager.ts";
 import { sleep, uniqueId } from "../src/util.ts";
-
-type RedisCompatibleClient = RedisClient | IORedis.Redis | IORedis.Cluster;
+import { MockRedisBroker, MockRedisClient } from "./helpers/mock-redis-broker.ts";
 
 // testing requires a real Redis server
 // fakeredis, redis-mock, redis-js, etc. have missing or broken client.duplicate()
@@ -37,11 +36,13 @@ function getRedisClients(): RedisCompatibleClient | RedisCompatibleClient[] {
       return [new IORedis.Cluster(config), new IORedis.Cluster(config)];
     }
 
-    default:
+    default: {
+      const broker = new MockRedisBroker();
       return [
-        redis.createClient(REDIS_PORT, REDIS_SERVER),
-        redis.createClient(REDIS_PORT, REDIS_SERVER),
+        new MockRedisClient(broker) as unknown as RedisCompatibleClient,
+        new MockRedisClient(broker) as unknown as RedisCompatibleClient,
       ];
+    }
   }
 }
 
@@ -57,165 +58,183 @@ async function waitForReady(rqm: RedisQuotaManager) {
   await sleep(100);
 }
 
-test("passing in a single client that doesn’t support duplicate() will throw", (t) => {
-  t.throws(
-    () => {
-      const fakeClient: any = {};
-      const quota: Quota = { rate: 3, interval: 500, concurrency: 2 };
-      const qm = new RedisQuotaManager(quota, uniqueId(), fakeClient);
-    },
-    { message: /client does not support the client.duplicate\(\) function/ },
-  );
-});
+suite("redisQuotaManager", { concurrency: true }, () => {
+  test("passing in a single client that doesn’t support duplicate() will throw", (_t) => {
+    assert.throws(
+      () => {
+        const fakeClient = {} as unknown as RedisCompatibleClient;
+        const quota: Quota = { rate: 3, interval: 500, concurrency: 2 };
+        const _qm = new RedisQuotaManager(quota, uniqueId(), fakeClient);
+      },
+      { message: /client does not support the client.duplicate\(\) function/ },
+    );
+  });
 
-test("Redis quota manager works", async (t) => {
-  const clients = getRedisClients();
-  const quota: Quota = { rate: 3, interval: 500, concurrency: 2 };
-  const qm: RedisQuotaManager = new RedisQuotaManager(quota, uniqueId(), clients);
+  test("Redis quota manager works", async (_t) => {
+    const clients = getRedisClients();
+    const quota: Quota = { rate: 3, interval: 500, concurrency: 2 };
+    const qm: RedisQuotaManager = new RedisQuotaManager(quota, uniqueId(), clients);
 
-  await waitForReady(qm);
+    await waitForReady(qm);
 
-  t.true(qm.start(), "start job (1)");
-  t.true(qm.start(), "start job (2)");
-  t.false(qm.start(), "would exceed max concurrency of 2");
-  qm.end();
-  t.true(qm.start(), "start job (3)");
-  t.is(qm.activeCount, 2);
-  t.false(qm.start(), "would exceed quota of 3 per 1/2 second");
-  qm.end();
-  t.is(qm.activeCount, 1, "still 1 running");
-  t.false(qm.start(), "still would exceed quota of 3 per 1/2 second");
-  await sleep(600);
-  t.is(qm.activeCount, 1, "still 1 running, after sleep");
-  t.true(qm.start(), "start job (4)");
-  t.is(qm.activeCount, 2, "still 2 running");
-  t.false(qm.start(), "would exceed max concurrency of 2");
-  qm.end();
-  t.true(qm.start(), "start job (5)");
-  t.is(qm.activeCount, 2, "still 2 running");
-  qm.end();
-  qm.end();
-  t.is(qm.activeCount, 0, "none running");
-});
+    assert.equal(qm.start(), true, "start job (1)");
+    assert.equal(qm.start(), true, "start job (2)");
+    assert.equal(qm.start(), false, "would exceed max concurrency of 2");
+    qm.end();
+    assert.equal(qm.start(), true, "start job (3)");
+    assert.equal(qm.activeCount, 2);
+    assert.equal(qm.start(), false, "would exceed quota of 3 per 1/2 second");
+    qm.end();
+    assert.equal(qm.activeCount, 1, "still 1 running");
+    assert.equal(qm.start(), false, "still would exceed quota of 3 per 1/2 second");
+    await sleep(600);
+    assert.equal(qm.activeCount, 1, "still 1 running, after sleep");
+    assert.equal(qm.start(), true, "start job (4)");
+    assert.equal(qm.activeCount, 2, "still 2 running");
+    assert.equal(qm.start(), false, "would exceed max concurrency of 2");
+    qm.end();
+    assert.equal(qm.start(), true, "start job (5)");
+    assert.equal(qm.activeCount, 2, "still 2 running");
+    qm.end();
+    qm.end();
+    assert.equal(qm.activeCount, 0, "none running");
+  });
 
-test("separate Redis quota managers coordinate", async (t) => {
-  const clients1 = getRedisClients();
-  const clients2 = getRedisClients();
-  const quota: Quota = { rate: 4, interval: 500, concurrency: 2 };
-  const channelName = uniqueId();
-  const qm1: RedisQuotaManager = new RedisQuotaManager(quota, channelName, clients1);
-  const qm2: RedisQuotaManager = new RedisQuotaManager(quota, channelName, clients2);
+  test("separate Redis quota managers coordinate", async (_t) => {
+    const clients1 = getRedisClients();
+    const clients2 = getRedisClients();
+    const quota: Quota = { rate: 4, interval: 500, concurrency: 2 };
+    const channelName = uniqueId();
+    const qm1: RedisQuotaManager = new RedisQuotaManager(quota, channelName, clients1);
+    const qm2: RedisQuotaManager = new RedisQuotaManager(quota, channelName, clients2);
 
-  await Promise.all([waitForReady(qm1), waitForReady(qm2)]);
+    await Promise.all([waitForReady(qm1), waitForReady(qm2)]);
 
-  // each quota manager should have been assigned 1/2 of the available quota
-  const expectedQuota: Quota = {
-    interval: quota.interval,
-    rate: Math.floor(quota.rate / 2),
-    concurrency: Math.floor(quota.concurrency / 2),
-  };
+    // each quota manager should have been assigned 1/2 of the available quota
+    assert(quota.rate);
+    assert(quota.concurrency);
+    const expectedQuota: Quota = {
+      interval: quota.interval,
+      rate: Math.floor(quota.rate / 2),
+      concurrency: Math.floor(quota.concurrency / 2),
+    };
 
-  const actualQuota1 = qm1.quota;
-  t.deepEqual(actualQuota1, expectedQuota, "client 1 has the correct quota");
-  const actualQuota2 = qm2.quota;
-  t.deepEqual(actualQuota2, expectedQuota, "client 2 has the correct quota");
-});
+    const actualQuota1 = qm1.quota;
+    assert.deepEqual(actualQuota1, expectedQuota, "client 1 has the correct quota");
+    const actualQuota2 = qm2.quota;
+    assert.deepEqual(actualQuota2, expectedQuota, "client 2 has the correct quota");
+  });
 
-test("Redis quota can be updated", async (t) => {
-  const clients1 = getRedisClients();
-  const clients2 = getRedisClients();
+  test("Redis quota can be updated", async (_t) => {
+    const clients1 = getRedisClients();
+    const clients2 = getRedisClients();
 
-  const quota: Quota = { rate: 4, interval: 500, concurrency: 2 };
-  const channelName = uniqueId();
-  const qm1: RedisQuotaManager = new RedisQuotaManager(quota, channelName, clients1);
-  const qm2: RedisQuotaManager = new RedisQuotaManager(quota, channelName, clients2);
+    const quota: Quota = { rate: 4, interval: 500, concurrency: 2 };
+    const channelName = uniqueId();
+    const qm1: RedisQuotaManager = new RedisQuotaManager(quota, channelName, clients1);
+    const qm2: RedisQuotaManager = new RedisQuotaManager(quota, channelName, clients2);
 
-  await Promise.all([waitForReady(qm1), waitForReady(qm2)]);
+    await Promise.all([waitForReady(qm1), waitForReady(qm2)]);
 
-  // each quota manager should have been assigned 1/2 the overall quota
-  let expectedQuota = Object.assign({}, quota);
-  expectedQuota.rate = Math.floor(expectedQuota.rate / 2);
-  expectedQuota.concurrency = Math.floor(expectedQuota.concurrency / 2);
-  let actualQuota1 = qm1.quota;
-  t.deepEqual(actualQuota1, expectedQuota, "client 1 quota should be correct");
-  let actualQuota2 = qm2.quota;
-  t.deepEqual(actualQuota2, expectedQuota, "client 2 quota should be correct");
+    // each quota manager should have been assigned 1/2 the overall quota
+    let expectedQuota = Object.assign({}, quota);
+    assert(expectedQuota.rate);
+    assert(expectedQuota.concurrency);
+    expectedQuota.rate = Math.floor(expectedQuota.rate / 2);
+    expectedQuota.concurrency = Math.floor(expectedQuota.concurrency / 2);
+    let actualQuota1 = qm1.quota;
+    assert.deepEqual(actualQuota1, expectedQuota, "client 1 quota should be correct");
+    let actualQuota2 = qm2.quota;
+    assert.deepEqual(actualQuota2, expectedQuota, "client 2 quota should be correct");
 
-  const clients3 = getRedisClients();
-  const qm3: RedisQuotaManager = new RedisQuotaManager(quota, channelName, clients3);
-  await waitForReady(qm3);
+    const clients3 = getRedisClients();
+    const qm3: RedisQuotaManager = new RedisQuotaManager(quota, channelName, clients3);
+    await waitForReady(qm3);
 
-  // each quota manager should now have 1/3 the overall quota
-  expectedQuota = Object.assign({}, quota);
-  expectedQuota.rate = Math.floor(expectedQuota.rate / 3);
-  expectedQuota.concurrency = Math.floor(expectedQuota.concurrency / 3);
-  actualQuota1 = qm1.quota;
-  t.deepEqual(actualQuota1, expectedQuota, "client 1 quota should be updated");
-  actualQuota2 = qm2.quota;
-  t.deepEqual(actualQuota2, expectedQuota, "client 2 quota should be updated");
-  const actualQuota3 = qm3.quota;
-  t.deepEqual(actualQuota3, expectedQuota, "client 3 quota should be updated");
-});
+    // each quota manager should now have 1/3 the overall quota
+    expectedQuota = Object.assign({}, quota);
+    assert(expectedQuota.rate);
+    assert(expectedQuota.concurrency);
+    expectedQuota.rate = Math.floor(expectedQuota.rate / 3);
+    expectedQuota.concurrency = Math.floor(expectedQuota.concurrency / 3);
+    actualQuota1 = qm1.quota;
+    assert.deepEqual(actualQuota1, expectedQuota, "client 1 quota should be updated");
+    actualQuota2 = qm2.quota;
+    assert.deepEqual(actualQuota2, expectedQuota, "client 2 quota should be updated");
+    const actualQuota3 = qm3.quota;
+    assert.deepEqual(actualQuota3, expectedQuota, "client 3 quota should be updated");
+  });
 
-test("RedisQuotaManager has a zero concurrency quota before it’s ready", async (t) => {
-  const clients = getRedisClients();
-  const quota: Quota = { rate: 3, interval: 500, concurrency: 2 };
-  const qm: RedisQuotaManager = new RedisQuotaManager(quota, uniqueId(), clients);
+  test("RedisQuotaManager has a zero concurrency quota before it’s ready", async (_t) => {
+    const clients = getRedisClients();
+    const quota: Quota = { rate: 3, interval: 500, concurrency: 2 };
+    const qm: RedisQuotaManager = new RedisQuotaManager(quota, uniqueId(), clients);
 
-  t.is(qm.quota.concurrency, 0);
-  await waitForReady(qm);
-  t.is(qm.quota.concurrency, 2);
-});
+    assert.equal(qm.quota.concurrency, 0);
+    await waitForReady(qm);
+    assert.equal(qm.quota.concurrency, 2);
+  });
 
-test("RedisQuotaManager with undefined concurrency has zero concurrency before it’s ready", async (t) => {
-  const clients = getRedisClients();
-  const quota: Quota = { rate: 3, interval: 500 };
-  const qm: RedisQuotaManager = new RedisQuotaManager(quota, uniqueId(), clients);
+  test("RedisQuotaManager with undefined concurrency has zero concurrency before it’s ready", async (_t) => {
+    const clients = getRedisClients();
+    const quota: Quota = { rate: 3, interval: 500 };
+    const qm: RedisQuotaManager = new RedisQuotaManager(quota, uniqueId(), clients);
 
-  t.is(qm.quota.concurrency, 0);
-  await waitForReady(qm);
-  t.is(qm.quota.concurrency, undefined);
-});
+    assert.equal(qm.quota.concurrency, 0);
+    await waitForReady(qm);
+    assert.equal(qm.quota.concurrency, undefined);
+  });
 
-test("maxDelay applies to RedisQuotaManager even before it’s ready", async (t) => {
-  const clients = getRedisClients();
-  const quota: Quota = {
-    rate: 3,
-    interval: 500,
-    concurrency: 2,
-    maxDelay: 250,
-  };
-  const qm: RedisQuotaManager = new RedisQuotaManager(quota, uniqueId(), clients);
+  test("maxDelay applies to RedisQuotaManager even before it’s ready", async (_t) => {
+    const clients = getRedisClients();
+    const quota: Quota = {
+      rate: 3,
+      interval: 500,
+      concurrency: 2,
+      maxDelay: 250,
+    };
+    const qm: RedisQuotaManager = new RedisQuotaManager(quota, uniqueId(), clients);
 
-  t.is(qm.quota.maxDelay, 250);
-  await waitForReady(qm);
-  t.is(qm.quota.maxDelay, 250);
-});
+    assert.equal(qm.quota.maxDelay, 250);
+    await waitForReady(qm);
+    assert.equal(qm.quota.maxDelay, 250);
+  });
 
-test("RedisQuotaManager with fastStart = true will process requests right away", async (t) => {
-  const channelName = uniqueId();
+  test("RedisQuotaManager with fastStart = true will process requests right away", async (_t) => {
+    const channelName = uniqueId();
 
-  const clients = getRedisClients();
-  const quota: Quota = {
-    rate: 10,
-    interval: 500,
-    concurrency: 4,
-    fastStart: true,
-  };
-  const qm: RedisQuotaManager = new RedisQuotaManager(quota, channelName, clients);
+    const clients = getRedisClients();
+    const quota: Quota = {
+      rate: 10,
+      interval: 500,
+      concurrency: 4,
+      fastStart: true,
+    };
+    const qm: RedisQuotaManager = new RedisQuotaManager(quota, channelName, clients);
 
-  const clients2 = getRedisClients();
-  const qm2: RedisQuotaManager = new RedisQuotaManager(quota, channelName, clients2);
+    const clients2 = getRedisClients();
+    const _qm2: RedisQuotaManager = new RedisQuotaManager(quota, channelName, clients2);
 
-  t.is(qm.quota.concurrency, quota.concurrency, "starts with full concurrency quota");
-  t.is(qm.quota.rate, quota.rate, "starts with full rate quota");
-  t.true(qm.ready, "it’s ready immediately");
-  // wait for peer discovery
-  await sleep(3000);
-  t.is(
-    qm.quota.concurrency,
-    Math.floor(quota.concurrency / 2),
-    "now has half the concurrency quota",
-  );
-  t.is(qm.quota.rate, Math.floor(quota.rate / 2), "now has half the rate quota");
+    assert.equal(
+      qm.quota.concurrency,
+      quota.concurrency,
+      "starts with full concurrency quota",
+    );
+    assert.equal(qm.quota.rate, quota.rate, "starts with full rate quota");
+    assert.equal(qm.ready, true, "it’s ready immediately");
+    // wait for peer discovery
+    await sleep(3000);
+    assert(quota.concurrency);
+    assert(quota.rate);
+    assert.equal(
+      qm.quota.concurrency,
+      Math.floor(quota.concurrency / 2),
+      "now has half the concurrency quota",
+    );
+    assert.equal(
+      qm.quota.rate,
+      Math.floor(quota.rate / 2),
+      "now has half the rate quota",
+    );
+  });
 });
