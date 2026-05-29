@@ -1,21 +1,22 @@
-import { promisify, sleep, uniqueId } from '../util';
-
-import { Quota } from './quota';
-import { QuotaManager } from './quotaManager';
-import { RedisClient } from 'redis';
-import * as IORedis from 'ioredis';
+import { promisify } from "node:util";
+import type * as IORedis from "ioredis";
+import type { RedisClient } from "redis";
+import { sleep, uniqueId } from "../util.ts";
+import type { Quota } from "./quota.ts";
+import { QuotaManager } from "./quotaManager.ts";
 
 type RedisCompatibleClient = RedisClient | IORedis.Redis | IORedis.Cluster;
 
 /** QuotaManager that coordinates rate limits across servers. */
 export class RedisQuotaManager extends QuotaManager {
+  private readonly channelQuota: Quota;
+  private readonly heartbeatInterval: number;
   private readonly uniqueId = uniqueId();
   private readonly pubSubClient: RedisCompatibleClient;
   private readonly pingsReceived = new Map<string, number>();
   private readonly channelName: string;
   private readonly client: RedisCompatibleClient;
   private _ready: boolean;
-  private heartbeatTimer: any = null;
 
   /**
    * @param channelQuota the overall quota to be split among all clients
@@ -24,17 +25,19 @@ export class RedisQuotaManager extends QuotaManager {
    * @param heartbeatInterval how often to ping the Redis channel (milliseconds)
    */
   constructor(
-    private readonly channelQuota: Quota,
+    channelQuota: Quota,
     channelName: string,
     client: RedisCompatibleClient | RedisCompatibleClient[],
-    private readonly heartbeatInterval = 30000
+    heartbeatInterval = 30000,
   ) {
     // start with 0 concurrency so jobs don’t run until we’re ready
     super(
       Object.assign({}, channelQuota, {
-        concurrency: channelQuota.fastStart ? channelQuota.concurrency : 0
-      })
+        concurrency: channelQuota.fastStart ? channelQuota.concurrency : 0,
+      }),
     );
+    this.channelQuota = channelQuota;
+    this.heartbeatInterval = heartbeatInterval;
     this._ready = Boolean(channelQuota.fastStart);
     this.channelName = `ratelimit-${channelName}`;
 
@@ -42,14 +45,14 @@ export class RedisQuotaManager extends QuotaManager {
 
     if (clients.length === 1) {
       this.client = clients[0];
-      if (typeof this.client['duplicate'] !== 'function') {
+      if (typeof this.client.duplicate !== "function") {
         const msg =
-          '[p-ratelimit RedisQuotaManager] Your Redis client does not ' +
-          'support the client.duplicate() function. Please provide an array of two ' +
-          'clients instead.';
+          "[p-ratelimit RedisQuotaManager] Your Redis client does not " +
+          "support the client.duplicate() function. Please provide an array of two " +
+          "clients instead.";
         throw new Error(msg);
       }
-      this.pubSubClient = this.client['duplicate']();
+      this.pubSubClient = this.client.duplicate();
     } else {
       this.client = clients[0];
       this.pubSubClient = clients[1];
@@ -67,9 +70,9 @@ export class RedisQuotaManager extends QuotaManager {
   private async register() {
     this.pingsReceived.set(this.uniqueId, Date.now());
 
-    this.pubSubClient.on('message', (channel, message) => this.message(channel, message));
-    await promisify(this.pubSubClient['subscribe'].bind(this.pubSubClient))(
-      this.channelName
+    this.pubSubClient.on("message", (channel, message) => this.message(channel, message));
+    await promisify(this.pubSubClient.subscribe.bind(this.pubSubClient))(
+      this.channelName,
     );
 
     this.ping();
@@ -78,19 +81,19 @@ export class RedisQuotaManager extends QuotaManager {
       await sleep(3000);
     }
 
-    await this.updateQuota();
+    this.updateQuota();
     this._ready = true;
 
-    this.heartbeatTimer = setInterval(() => this.heartbeat(), this.heartbeatInterval);
+    setInterval(() => this.heartbeat(), this.heartbeatInterval);
   }
 
   /** Send a ping to the shared Redis channel */
   private ping() {
-    this.client['publish'](this.channelName, JSON.stringify(this.uniqueId));
+    this.client.publish(this.channelName, JSON.stringify(this.uniqueId));
   }
 
   /** Receive client pings */
-  private message(channel: string, message: any) {
+  private message(channel: string, message: string) {
     if (channel !== this.channelName) {
       return;
     }
@@ -117,8 +120,10 @@ export class RedisQuotaManager extends QuotaManager {
   /** Remove outdated clients */
   private removeOutdatedClients() {
     const ancient = Date.now() - this.heartbeatInterval * 3;
-    const expired = [...this.pingsReceived].filter(([k, v]) => v <= ancient);
-    expired.forEach(([k, v]) => this.pingsReceived.delete(k));
+    const expired = [...this.pingsReceived].filter(([_k, v]) => v <= ancient);
+    expired.forEach(([k, _v]) => {
+      this.pingsReceived.delete(k);
+    });
   }
 
   /** Calculate our portion of the overall channel quota */

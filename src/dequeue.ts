@@ -1,13 +1,15 @@
+import { strict as assert } from "node:assert";
+
 interface Node<T> {
   value: T;
-  prev: Node<T>;
-  next: Node<T>;
+  prev: Node<T> | undefined;
+  next: Node<T> | undefined;
 }
 
 export class Dequeue<T> {
   private _length = 0;
-  private head: Node<T> = undefined;
-  private tail: Node<T> = undefined;
+  private head: Node<T> | undefined = undefined;
+  private tail: Node<T> | undefined = undefined;
 
   get length() {
     return this._length;
@@ -22,10 +24,11 @@ export class Dequeue<T> {
     const newNode: Node<T> = {
       value,
       prev: this.tail,
-      next: undefined
+      next: undefined,
     };
 
     if (this._length) {
+      assert(this.tail);
       this.tail.next = newNode;
       this.tail = newNode;
     } else {
@@ -34,10 +37,11 @@ export class Dequeue<T> {
     this._length++;
   }
 
-  pop(): T {
+  pop(): T | undefined {
     if (!this._length) {
       return undefined;
     }
+    assert(this.tail);
     const result = this.tail;
     this.tail = this.tail.prev;
     this._length--;
@@ -51,10 +55,11 @@ export class Dequeue<T> {
     const newNode: Node<T> = {
       value,
       prev: undefined,
-      next: this.head
+      next: this.head,
     };
 
     if (this._length) {
+      assert(this.head);
       this.head.prev = newNode;
       this.head = newNode;
     } else {
@@ -64,10 +69,11 @@ export class Dequeue<T> {
     this._length++;
   }
 
-  shift(): T {
+  shift(): T | undefined {
     if (!this._length) {
       return undefined;
     }
+    assert(this.head);
     const result = this.head;
     this.head = this.head.next;
     this._length--;
@@ -77,15 +83,17 @@ export class Dequeue<T> {
     return result.value;
   }
 
-  peekFront(): T {
+  peekFront(): T | undefined {
     if (this._length) {
+      assert(this.head);
       return this.head.value;
     }
     return undefined;
   }
 
-  peekBack(): T {
+  peekBack(): T | undefined {
     if (this._length) {
+      assert(this.tail);
       return this.tail.value;
     }
     return undefined;

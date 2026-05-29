@@ -1,26 +1,29 @@
-import { Dequeue } from './dequeue';
-import { Quota } from './quota/quota';
-import { QuotaManager } from './quota/quotaManager';
-import { RateLimitTimeoutError } from './rateLimitTimeoutError';
+import { strict as assert } from "node:assert";
+import { Dequeue } from "./dequeue.ts";
+import type { Quota } from "./quota/quota.ts";
+import { QuotaManager } from "./quota/quotaManager.ts";
+import { RateLimitTimeoutError } from "./rateLimitTimeoutError.ts";
 
 export function pRateLimit(
-  quotaManager: QuotaManager | Quota
+  quotaManager: QuotaManager | Quota,
 ): <T>(fn: () => Promise<T>) => Promise<T> {
   if (!(quotaManager instanceof QuotaManager)) {
     return pRateLimit(new QuotaManager(quotaManager));
   }
 
-  const queue = new Dequeue<Function>();
-  let timerId: NodeJS.Timer = null;
+  const queue = new Dequeue<() => void>();
+  let timerId: ReturnType<typeof setTimeout> | undefined;
 
   const next = () => {
     while (queue.length && quotaManager.start()) {
-      queue.shift()();
+      const fn = queue.shift();
+      assert(fn);
+      fn();
     }
 
     if (queue.length && !quotaManager.activeCount && !timerId) {
       timerId = setTimeout(() => {
-        timerId = null;
+        timerId = undefined;
         next();
       }, 100);
     }
@@ -28,11 +31,11 @@ export function pRateLimit(
 
   return <T>(fn: () => Promise<T>) => {
     return new Promise<T>((resolve, reject) => {
-      let timerId: NodeJS.Timer = null;
+      let timerId: ReturnType<typeof setTimeout> | undefined;
       if (quotaManager.maxDelay) {
         timerId = setTimeout(() => {
-          timerId = null;
-          reject(new RateLimitTimeoutError('queue maxDelay timeout exceeded'));
+          timerId = undefined;
+          reject(new RateLimitTimeoutError("queue maxDelay timeout exceeded"));
           next();
         }, quotaManager.maxDelay);
       }
@@ -48,11 +51,11 @@ export function pRateLimit(
         }
 
         fn()
-          .then(val => {
+          .then((val) => {
             quotaManager.end();
             resolve(val);
           })
-          .catch(err => {
+          .catch((err) => {
             quotaManager.end();
             reject(err);
           })

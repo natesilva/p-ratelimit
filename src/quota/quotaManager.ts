@@ -1,22 +1,25 @@
-import { Dequeue } from '../dequeue';
-import { Quota } from './quota';
+import { strict as assert } from "node:assert";
+import { Dequeue } from "../dequeue.ts";
+import type { Quota } from "./quota.ts";
 
 /** keep track of API invocations, allowing or disallowing them based on our quota */
 export class QuotaManager {
+  protected _quota: Quota;
   protected _activeCount = 0;
-  protected history = new Dequeue();
+  protected history = new Dequeue<number>();
 
-  constructor(protected _quota: Quota) {
-    if (typeof _quota !== 'object') {
+  constructor(_quota: Quota) {
+    this._quota = _quota;
+    if (typeof _quota !== "object") {
       console.warn(
-        '[p-ratelimit QuotaManager] A QuotaManager was created with no quota.'
+        "[p-ratelimit QuotaManager] A QuotaManager was created with no quota.",
       );
       this._quota = {};
     }
 
     if (
-      ('interval' in this._quota && !('rate' in this._quota)) ||
-      ('rate' in this._quota && !('interval' in this._quota))
+      ("interval" in this._quota && !("rate" in this._quota)) ||
+      ("rate" in this._quota && !("interval" in this._quota))
     ) {
       const msg =
         `[p-ratelimit QuotaManager] Invalid Quota: for a rate-limit quota, both ` +
@@ -45,7 +48,7 @@ export class QuotaManager {
    * @returns true if the invocation was allowed, false if not (you can try again later)
    */
   start() {
-    if (this._activeCount >= this._quota.concurrency) {
+    if (this._quota.concurrency && this._activeCount >= this._quota.concurrency) {
       return false;
     }
 
@@ -67,9 +70,12 @@ export class QuotaManager {
   }
 
   protected removeExpiredHistory() {
+    assert(this._quota.interval);
     const expired = Date.now() - this._quota.interval;
-    while (this.history.length && this.history.peekFront() < expired) {
+    let front = this.history.peekFront();
+    while (front !== undefined && front < expired) {
       this.history.shift();
+      front = this.history.peekFront();
     }
   }
 }

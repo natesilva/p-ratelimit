@@ -60,3 +60,4 @@ typings/
 build
 test.ts
 *.sublime-workspace
+.DS_Store

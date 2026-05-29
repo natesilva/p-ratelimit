@@ -1,7 +1,5 @@
 export default {
-  extensions: ['ts'],
-  require: ['ts-node/register/transpile-only'],
-  files: [
-    "!build/**/*"
-  ]
+  extensions: ["ts"],
+  require: ["ts-node/register/transpile-only"],
+  files: ["!build/**/*"],
 };
