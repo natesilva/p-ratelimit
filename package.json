@@ -10,7 +10,9 @@
     "clean": "del-cli dist",
     "build": "tsdown",
     "test": "node --test",
-    "test:coverage": "node --test --experimental-test-coverage"
+    "test:coverage": "node --test --experimental-test-coverage",
+    "lint": "tsc && biome check",
+    "lint:fix": "tsc && biome check --fix"
   },
   "keywords": [
     "ratelimit",
